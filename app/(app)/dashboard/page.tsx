@@ -1,6 +1,8 @@
 import { DashboardLive } from "@/components/dashboard-live";
 import { getDashboardData } from "@/lib/actions";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const data = await getDashboardData();
 
