@@ -436,6 +436,48 @@ export async function adminDeleteUser(userId: string) {
   revalidatePath("/admin/corrections");
 }
 
+export async function adminSetUserPassword(input: {
+  userId: string;
+  newPassword: string;
+}) {
+  const actor = await sessionSuperadminOrThrow();
+  const pw = input.newPassword.trim();
+  if (pw.length < 8) {
+    throw new Error("La contraseña debe tener al menos 8 caracteres.");
+  }
+
+  const target = await prisma.user.findUnique({ where: { id: input.userId } });
+  if (!target) throw new Error("Usuario no encontrado.");
+
+  if (target.role !== "USER") {
+    throw new Error(
+      "Solo se puede restablecer la contraseña de trabajadores (rol usuario).",
+    );
+  }
+
+  if (isEnvSuperadminEmail(target.email)) {
+    throw new Error(
+      "Este correo está gestionado por variables de entorno; no se puede cambiar aquí.",
+    );
+  }
+
+  const hash = await bcrypt.hash(pw, 12);
+  await prisma.user.update({
+    where: { id: target.id },
+    data: { passwordHash: hash },
+  });
+
+  await writeAuditLog({
+    actorId: actor.id,
+    action: "USER_PASSWORD_RESET",
+    entityType: "User",
+    entityId: target.id,
+    metadata: { subjectEmail: target.email },
+  });
+
+  revalidatePath("/admin/users");
+}
+
 export async function getAdminAuditLogs() {
   await sessionSuperadminOrRedirect();
 

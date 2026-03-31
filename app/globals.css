@@ -26,6 +26,17 @@ body {
   text-size-adjust: 100%;
 }
 
+/* Safari iOS: zoom automático al enfocar inputs con font-size < 16px */
+@media (max-width: 639px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+      [type="submit"]
+    ):not([type="button"]):not([type="image"]):not([type="file"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
 /* Área segura en PWA / notch */
 @supports (padding: max(0px)) {
   body {

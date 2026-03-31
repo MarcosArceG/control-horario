@@ -56,6 +56,8 @@ export function etiquetaAccionAuditoria(action: string): string {
       return "Alta de usuario";
     case "USER_DELETE":
       return "Usuario eliminado";
+    case "USER_PASSWORD_RESET":
+      return "Contraseña restablecida";
     case "CSV_EXPORT_WORKED_HOURS":
       return "Exportación de horas trabajadas";
     case "VACATION_ENTITLEMENT_SET":

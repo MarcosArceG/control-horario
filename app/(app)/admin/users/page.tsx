@@ -1,3 +1,4 @@
+import { AdminResetPasswordButton } from "@/components/admin-reset-password-button";
 import { CreateUserForm } from "@/components/create-user-form";
 import { DeleteUserButton } from "@/components/delete-user-button";
 import { getAdminUsers } from "@/lib/actions";
@@ -70,15 +71,23 @@ export default async function AdminUsersPage() {
                     {formatFecha(u.createdAt)}
                   </td>
                   <td className="py-2 text-right">
-                    <DeleteUserButton
-                      userId={u.id}
-                      email={u.email}
-                      role={u.role}
-                      currentUserId={currentUserId}
-                      superAdminCount={superAdminCount}
-                      envSuperadminCount={envSuperAdmins}
-                      isEnvSuperadminEmail={isEnvSuperadminEmail(u.email)}
-                    />
+                    <div className="flex flex-col items-end gap-2 sm:flex-row sm:justify-end sm:gap-3">
+                      {u.role === "USER" ? (
+                        <AdminResetPasswordButton
+                          userId={u.id}
+                          email={u.email}
+                        />
+                      ) : null}
+                      <DeleteUserButton
+                        userId={u.id}
+                        email={u.email}
+                        role={u.role}
+                        currentUserId={currentUserId}
+                        superAdminCount={superAdminCount}
+                        envSuperadminCount={envSuperAdmins}
+                        isEnvSuperadminEmail={isEnvSuperadminEmail(u.email)}
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}
