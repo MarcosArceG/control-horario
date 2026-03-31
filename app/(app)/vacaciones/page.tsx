@@ -5,7 +5,7 @@ import { MyVacationsPanel } from "@/components/vacations/my-vacations-panel";
 
 export default async function VacacionesPage() {
   const session = await authSafe();
-  if (!session?.user) await redirectToLoginClearingSession();
+  if (!session?.user) redirectToLoginClearingSession();
   if (session!.user.role === "SUPERADMIN") redirect("/admin/vacaciones");
 
   const year = new Date().getFullYear();

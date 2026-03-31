@@ -1,4 +1,4 @@
-import { auth, signOut } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import type { Session } from "next-auth";
 import { redirect, unstable_rethrow } from "next/navigation";
 
@@ -40,24 +40,13 @@ export async function sessionSuperadminOrThrow(): Promise<SessionUser> {
   return user;
 }
 
-/** URL de login tras cerrar sesión (absoluta si hay AUTH_URL / NEXT_PUBLIC_APP_URL). */
-function buildLoginCallbackUrl(): string {
-  const base =
-    process.env.AUTH_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (base) {
-    return `${base.replace(/\/$/, "")}/login`;
-  }
-  return "/login";
-}
-
 /**
- * Cierra sesión con POST interno (Auth.js) y redirige a /login. Úsalo cuando la
- * sesión no es válida en RSC pero el middleware aún ve cookie: evita el bucle
- * login ↔ dashboard (ERR_TOO_MANY_REDIRECTS).
+ * Vuelve a /login sin encadenar signOut (en producción signOut + AUTH_URL mal
+ * configurada generaba bucles y redirecciones raras). El middleware ya no fuerza
+ * /login → /dashboard; así no choca con el RSC.
  */
-export async function redirectToLoginClearingSession(): Promise<never> {
-  await signOut({ redirectTo: buildLoginCallbackUrl() });
-  throw new Error("signOut debería redirigir");
+export function redirectToLoginClearingSession(): never {
+  redirect("/login");
 }
 
 /**
@@ -66,16 +55,16 @@ export async function redirectToLoginClearingSession(): Promise<never> {
 export async function sessionUserOrRedirect(): Promise<SessionUser> {
   const session = await authSafe();
   if (!session?.user?.id) {
-    await redirectToLoginClearingSession();
+    redirectToLoginClearingSession();
   }
   return session!.user as SessionUser;
 }
 
-/** Sin sesión → signout + login; usuario normal en ruta admin → /dashboard */
+/** Sin sesión → login; usuario normal en ruta admin → /dashboard */
 export async function sessionSuperadminOrRedirect(): Promise<SessionUser> {
   const session = await authSafe();
   if (!session?.user?.id) {
-    await redirectToLoginClearingSession();
+    redirectToLoginClearingSession();
   }
   const user = session!.user as SessionUser;
   if (user.role !== "SUPERADMIN") {

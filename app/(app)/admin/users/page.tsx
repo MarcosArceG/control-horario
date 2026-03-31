@@ -11,7 +11,7 @@ import {
 
 export default async function AdminUsersPage() {
   const session = await authSafe();
-  if (!session?.user) await redirectToLoginClearingSession();
+  if (!session?.user) redirectToLoginClearingSession();
   const users = await getAdminUsers();
   const superAdminCount = users.filter((u) => u.role === "SUPERADMIN").length;
   const envSuperAdmins = envSuperadminCount();

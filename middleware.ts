@@ -6,9 +6,9 @@ const authMiddleware = auth((req) => {
   const loggedIn = !!req.auth;
 
   if (pathname.startsWith("/login")) {
-    if (loggedIn) {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
-    }
+    // No redirigir aquí a /dashboard: en producción el JWT en Edge y la sesión
+    // en RSC a veces no coinciden y provoca bucles. Quien ya está logueado
+    // se envía al panel desde el cliente (RedirectIfAuthenticated en /login).
     return NextResponse.next();
   }
 
