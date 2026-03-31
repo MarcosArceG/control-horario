@@ -43,6 +43,21 @@ npm start
 
 En CI/CD puedes usar `prisma migrate deploy` si prefieres migraciones en lugar de `db push`.
 
+### Vercel
+
+En **Project → Settings → Environment Variables** define al menos:
+
+| Variable | Notas |
+| -------- | ----- |
+| `AUTH_SECRET` | Obligatorio en producción (p. ej. `openssl rand -base64 32`). Sin esto Auth.js falla. |
+| `AUTH_URL` | URL pública exacta: `https://tu-proyecto.vercel.app` o tu dominio (sin barra final). |
+| `DATABASE_URL` | Cadena PostgreSQL; muchos proveedores exigen `?sslmode=require`. Tras el primer deploy, ejecuta `prisma db push` o migraciones contra esa base. |
+| `SUPERADMIN_ACCOUNTS` | Misma línea JSON que en local (entre comillas si hace falta en el panel). |
+
+Opcional: `NEXT_PUBLIC_APP_URL` igual que `AUTH_URL` si usas el `id` del manifest PWA.
+
+Si algo falla, revisa **Logs** del deployment y prueba `GET /api/health` (debe responder `{"ok":true}` sin base de datos).
+
 ## Exportación de horas
 
 Los superadministradores pueden descargar un **archivo de valores separados por comas** con las horas trabajadas por usuario y día natural en UTC (rango de fechas) desde **Administración → Exportar horas**. Los días usan límites UTC; si necesitas zona horaria local, habría que adaptar la lógica de cálculo por día.
