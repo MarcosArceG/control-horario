@@ -1,21 +1,15 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+/**
+ * Los superadministradores se definen en SUPERADMIN_ACCOUNTS (ver .env.example).
+ * Este seed puede usarse para datos de prueba de usuarios normales si lo amplias.
+ */
 async function main() {
-  const passwordHash = await bcrypt.hash("ChangeMe123!", 12);
-  await prisma.user.upsert({
-    where: { email: "admin@example.com" },
-    create: {
-      email: "admin@example.com",
-      passwordHash,
-      name: "Superadministrador",
-      role: "SUPERADMIN",
-    },
-    update: {},
-  });
-  console.log("Seed creado: admin@example.com / ChangeMe123!");
+  console.log(
+    "Seed: no se crean usuarios por defecto. Configura SUPERADMIN_ACCOUNTS en .env para administradores.",
+  );
 }
 
 main()

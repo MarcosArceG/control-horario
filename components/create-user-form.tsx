@@ -9,7 +9,6 @@ export function CreateUserForm() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"USER" | "SUPERADMIN">("USER");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -18,11 +17,10 @@ export function CreateUserForm() {
     setError(null);
     startTransition(async () => {
       try {
-        await adminCreateUser({ email, name, password, role });
+        await adminCreateUser({ email, name, password });
         setEmail("");
         setName("");
         setPassword("");
-        setRole("USER");
         router.refresh();
       } catch (err) {
         setError(
@@ -34,6 +32,10 @@ export function CreateUserForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
+      <p className="text-sm text-slate-500">
+        Solo se crean <strong className="text-slate-700 dark:text-slate-300">usuarios</strong>. Los superadministradores se configuran en{" "}
+        <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">SUPERADMIN_ACCOUNTS</code> (entorno).
+      </p>
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700 dark:text-slate-300">
           Correo electrónico
@@ -68,21 +70,6 @@ export function CreateUserForm() {
           onChange={(e) => setPassword(e.target.value)}
           className="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
         />
-      </label>
-      <label className="flex flex-col gap-1 text-sm">
-        <span className="font-medium text-slate-700 dark:text-slate-300">
-          Rol
-        </span>
-        <select
-          value={role}
-          onChange={(e) =>
-            setRole(e.target.value as "USER" | "SUPERADMIN")
-          }
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
-        >
-          <option value="USER">Usuario</option>
-          <option value="SUPERADMIN">Superadministrador</option>
-        </select>
       </label>
       {error ? (
         <p className="text-sm text-red-600 dark:text-red-400">{error}</p>

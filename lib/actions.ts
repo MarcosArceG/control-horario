@@ -9,6 +9,7 @@ import {
   localDayBounds,
   mondayOfWeek,
   toEffectiveEvents,
+  type SessionState,
   workedMsByUserDay,
   workedMsInRange,
 } from "@/lib/time";
@@ -16,6 +17,10 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import type { TimeEventType } from "@prisma/client";
 import type { Session } from "next-auth";
+import {
+  envSuperadminCount,
+  isEnvSuperadminEmail,
+} from "@/lib/superadmin-env";
 
 function assertUser(session: Session | null) {
   if (!session?.user?.id) throw new Error("No autorizado.");
@@ -38,24 +43,25 @@ export type DashboardWeekDay = {
   isToday: boolean;
 };
 
-export async function getDashboardData() {
-  const session = await auth();
-  const user = assertUser(session);
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { name: true, email: true },
-  });
-  const displayName = firstDisplayName(
-    dbUser?.name,
-    dbUser?.email ?? user.email ?? "",
-  );
+export type DashboardLiveMetrics = {
+  state: SessionState;
+  workedTodayMs: number;
+  workedWeekMs: number;
+  remainingDayMs: number;
+  remainingWeekMs: number;
+  targetDayMs: number;
+  targetWeekMs: number;
+  weekDays: DashboardWeekDay[];
+  sessionStart: string | null;
+};
 
+async function computeDashboardMetrics(userId: string): Promise<DashboardLiveMetrics> {
   const events = await prisma.timeEvent.findMany({
-    where: { userId: user.id },
+    where: { userId },
     orderBy: { occurredAt: "asc" },
   });
   const corrections = await prisma.timeCorrection.findMany({
-    where: { userId: user.id },
+    where: { userId },
   });
   const effective = toEffectiveEvents(events, corrections);
   const state = deriveSessionState(effective);
@@ -104,8 +110,6 @@ export async function getDashboardData() {
 
   return {
     state,
-    recentEvents: events.slice(-20).reverse(),
-    displayName,
     workedTodayMs,
     workedWeekMs,
     remainingDayMs,
@@ -114,6 +118,33 @@ export async function getDashboardData() {
     targetWeekMs: TARGET_WEEK_MS,
     weekDays,
     sessionStart: sessionStart?.toISOString() ?? null,
+  };
+}
+
+/** Actualiza métricas del panel sin recargar (llamada desde el cliente). */
+export async function getDashboardLiveMetrics(): Promise<DashboardLiveMetrics> {
+  const session = await auth();
+  const user = assertUser(session);
+  return computeDashboardMetrics(user.id);
+}
+
+export async function getDashboardData() {
+  const session = await auth();
+  const user = assertUser(session);
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { name: true, email: true },
+  });
+  const displayName = firstDisplayName(
+    dbUser?.name,
+    dbUser?.email ?? user.email ?? "",
+  );
+
+  const metrics = await computeDashboardMetrics(user.id);
+
+  return {
+    displayName,
+    ...metrics,
   };
 }
 
@@ -217,7 +248,6 @@ export async function adminCreateUser(input: {
   email: string;
   password: string;
   name?: string;
-  role: "USER" | "SUPERADMIN";
 }) {
   const session = await auth();
   const actor = assertUser(session);
@@ -230,13 +260,19 @@ export async function adminCreateUser(input: {
     );
   }
 
+  if (isEnvSuperadminEmail(email)) {
+    throw new Error(
+      "Este correo está reservado para un superadministrador del .env. Usa otro correo.",
+    );
+  }
+
   const passwordHash = await bcrypt.hash(input.password, 12);
   const created = await prisma.user.create({
     data: {
       email,
       passwordHash,
       name: input.name?.trim() || null,
-      role: input.role,
+      role: "USER",
     },
   });
 
@@ -383,8 +419,16 @@ export async function adminDeleteUser(userId: string) {
   if (!target) throw new Error("Usuario no encontrado.");
 
   if (target.role === "SUPERADMIN") {
-    const superAdmins = await prisma.user.count({ where: { role: "SUPERADMIN" } });
-    if (superAdmins <= 1) {
+    if (isEnvSuperadminEmail(target.email)) {
+      throw new Error(
+        "Este correo está en SUPERADMIN_ACCOUNTS. Elimínalo del .env y despliega antes de borrar la cuenta.",
+      );
+    }
+    const superAdmins = await prisma.user.count({
+      where: { role: "SUPERADMIN" },
+    });
+    const envCount = envSuperadminCount();
+    if (superAdmins <= 1 && envCount === 0) {
       throw new Error("No se puede eliminar el único superadministrador.");
     }
   }

@@ -1,6 +1,6 @@
 # Control Horario
 
-Aplicación de control horario con Next.js (App Router), PostgreSQL, Prisma y acceso por correo y contraseña. Roles: **SUPERADMIN** y **USER**. El tiempo trabajado se **calcula a partir de eventos** (`CLOCK_IN`, `CLOCK_OUT`; en datos antiguos pueden existir `BREAK_*`); no se guarda como total acumulado. Los **eventos son solo altas**; los cambios pasan por **solicitudes de corrección** revisadas por administradores. El **registro de auditoría** guarda acciones de seguridad y datos.
+Aplicación de control horario con Next.js (App Router), PostgreSQL, Prisma y acceso por correo y contraseña. Roles: **SUPERADMIN** (definidos solo en la variable de entorno `SUPERADMIN_ACCOUNTS`) y **USER** (creados desde el panel de administración). El tiempo trabajado se **calcula a partir de eventos** (`CLOCK_IN`, `CLOCK_OUT`; en datos antiguos pueden existir `BREAK_*`); no se guarda como total acumulado. Los **eventos son solo altas**; los cambios pasan por **solicitudes de corrección** revisadas por administradores. El **registro de auditoría** guarda acciones de seguridad y datos.
 
 ## Requisitos
 
@@ -15,15 +15,16 @@ Aplicación de control horario con Next.js (App Router), PostgreSQL, Prisma y ac
    cp .env.example .env
    ```
 
-   Configura `DATABASE_URL`, `AUTH_SECRET` (por ejemplo `openssl rand -base64 32`) y `AUTH_URL` (por ejemplo `http://localhost:3000`).
+   Configura `DATABASE_URL`, `AUTH_SECRET` (por ejemplo `openssl rand -base64 32`), `AUTH_URL` (por ejemplo `http://localhost:3000`) y **`SUPERADMIN_ACCOUNTS`**: JSON con uno o más objetos `{ "email", "password" }` (ver `.env.example`). Los superadministradores no se crean por seed ni desde el formulario de altas.
 
 2. Instala dependencias y aplica el esquema:
 
    ```bash
    npm install
    npx prisma db push
-   npm run db:seed
    ```
+
+   Opcional: `npm run db:seed` (actualmente solo muestra un mensaje informativo).
 
 3. Arranca el servidor de desarrollo:
 
@@ -31,12 +32,7 @@ Aplicación de control horario con Next.js (App Router), PostgreSQL, Prisma y ac
    npm run dev
    ```
 
-4. Inicia sesión con el superadministrador creado por el seed:
-
-   - Correo: `admin@example.com`
-   - Contraseña: `ChangeMe123!`
-
-   En producción cambia esta contraseña actualizando el hash en la base de datos o creando otro administrador y eliminando la cuenta de seed.
+4. Inicia sesión con un correo y contraseña definidos en `SUPERADMIN_ACCOUNTS`. En el primer acceso se crea el usuario en la base de datos con rol superadministrador. Los trabajadores se dan de alta desde **Administración → Usuarios** una vez dentro.
 
 ## Producción
 

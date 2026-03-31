@@ -13,6 +13,8 @@ type Props = {
   workedTodayMs: number;
   targetDayMs: number;
   sessionStart: string | null;
+  /** Tras fichar, actualiza métricas del panel sin depender solo de router.refresh */
+  onMetricsRefresh?: () => void | Promise<void>;
 };
 
 const RING_R = 54;
@@ -24,6 +26,7 @@ export function DashboardHero({
   workedTodayMs,
   targetDayMs,
   sessionStart,
+  onMetricsRefresh,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +57,7 @@ export function DashboardHero({
     startTransition(async () => {
       try {
         await registerClockEvent(type);
+        await onMetricsRefresh?.();
         router.refresh();
       } catch (e) {
         setError(
@@ -80,7 +84,7 @@ export function DashboardHero({
                 type="button"
                 disabled={pending}
                 onClick={() => fire("CLOCK_IN")}
-                className="rounded-full bg-blue-600 px-8 py-3.5 text-base font-semibold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-400"
+                className="min-h-12 touch-manipulation rounded-full bg-blue-600 px-8 py-3.5 text-base font-semibold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-400"
               >
                 {pending ? "…" : "Entrada"}
               </button>
@@ -90,7 +94,7 @@ export function DashboardHero({
                 type="button"
                 disabled={pending}
                 onClick={() => fire("CLOCK_OUT")}
-                className="rounded-full bg-blue-600 px-8 py-3.5 text-base font-semibold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-400"
+                className="min-h-12 touch-manipulation rounded-full bg-blue-600 px-8 py-3.5 text-base font-semibold text-white shadow-md shadow-blue-600/25 transition hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60 dark:bg-blue-500 dark:hover:bg-blue-400"
               >
                 {pending ? "…" : "Salida"}
               </button>

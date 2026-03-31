@@ -11,6 +11,8 @@ type Props = {
   role: Role;
   currentUserId: string;
   superAdminCount: number;
+  envSuperadminCount: number;
+  isEnvSuperadminEmail: boolean;
 };
 
 export function DeleteUserButton({
@@ -19,6 +21,8 @@ export function DeleteUserButton({
   role,
   currentUserId,
   superAdminCount,
+  envSuperadminCount,
+  isEnvSuperadminEmail: envEmail,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +30,10 @@ export function DeleteUserButton({
 
   const blocked =
     userId === currentUserId ||
-    (role === "SUPERADMIN" && superAdminCount <= 1);
+    envEmail ||
+    (role === "SUPERADMIN" &&
+      superAdminCount <= 1 &&
+      envSuperadminCount === 0);
 
   function onDelete() {
     if (blocked) return;
@@ -56,7 +63,9 @@ export function DeleteUserButton({
           blocked
             ? userId === currentUserId
               ? "No puedes eliminar tu propia cuenta"
-              : "No se puede eliminar el único superadministrador"
+              : envEmail
+                ? "Quita este correo de SUPERADMIN_ACCOUNTS en el .env antes de eliminar"
+                : "No se puede eliminar el único superadministrador"
             : "Eliminar usuario"
         }
         className="rounded-md border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-red-900 dark:bg-slate-900 dark:text-red-300 dark:hover:bg-red-950"

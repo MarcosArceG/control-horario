@@ -4,11 +4,16 @@ import { getAdminUsers } from "@/lib/actions";
 import { auth } from "@/lib/auth";
 import { formatFecha } from "@/lib/locale";
 import { etiquetaRol } from "@/lib/labels-es";
+import {
+  envSuperadminCount,
+  isEnvSuperadminEmail,
+} from "@/lib/superadmin-env";
 
 export default async function AdminUsersPage() {
   const session = await auth();
   const users = await getAdminUsers();
   const superAdminCount = users.filter((u) => u.role === "SUPERADMIN").length;
+  const envSuperAdmins = envSuperadminCount();
   const currentUserId = session?.user?.id ?? "";
 
   return (
@@ -32,7 +37,9 @@ export default async function AdminUsersPage() {
         </h2>
         <p className="mt-1 text-sm text-slate-500">
           Eliminar una cuenta borra sus registros horarios y datos asociados.
-          No puedes eliminarte a ti mismo ni al único superadministrador.
+          No puedes eliminarte a ti mismo, ni un correo definido en{" "}
+          <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">SUPERADMIN_ACCOUNTS</code>
+          , ni al único superadministrador si no hay cuentas en el entorno.
         </p>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">
@@ -78,6 +85,8 @@ export default async function AdminUsersPage() {
                       role={u.role}
                       currentUserId={currentUserId}
                       superAdminCount={superAdminCount}
+                      envSuperadminCount={envSuperAdmins}
+                      isEnvSuperadminEmail={isEnvSuperadminEmail(u.email)}
                     />
                   </td>
                 </tr>
