@@ -15,10 +15,21 @@ const geistMono = Geist_Mono({
 });
 
 const metadataBaseUrl = (() => {
-  const u = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (u) return new URL(u.replace(/\/$/, ""));
-  if (process.env.VERCEL_URL)
-    return new URL(`https://${process.env.VERCEL_URL}`);
+  try {
+    const u = process.env.NEXT_PUBLIC_APP_URL?.trim();
+    if (u) {
+      const withProto =
+        u.startsWith("http://") || u.startsWith("https://") ? u : `https://${u}`;
+      return new URL(withProto.replace(/\/$/, ""));
+    }
+    if (process.env.VERCEL_URL) {
+      return new URL(`https://${process.env.VERCEL_URL}`);
+    }
+  } catch {
+    console.error(
+      "[layout] NEXT_PUBLIC_APP_URL u otra URL base no válida; revisa variables de entorno.",
+    );
+  }
   return undefined;
 })();
 

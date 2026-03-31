@@ -1,8 +1,8 @@
-import { auth } from "@/lib/auth";
+import { authSafe } from "@/lib/auth-safe";
 import { redirect } from "next/navigation";
 
 export default async function HomePage() {
-  const session = await auth();
+  const session = await authSafe();
   if (session) redirect("/dashboard");
   redirect("/login");
 }
