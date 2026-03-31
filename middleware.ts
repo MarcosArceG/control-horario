@@ -20,7 +20,7 @@ const authMiddleware = auth((req) => {
   ) {
     if (!loggedIn) {
       const url = new URL("/login", req.url);
-      url.searchParams.set("callbackUrl", pathname);
+      url.searchParams.set("callbackUrl", pathname || "/");
       return NextResponse.redirect(url);
     }
 
@@ -43,7 +43,7 @@ export default async function middleware(
     console.error("[middleware]", e);
     const req = args[0];
     const login = new URL("/login", req.url);
-    login.searchParams.set("callbackUrl", req.nextUrl.pathname);
+    login.searchParams.set("callbackUrl", req.nextUrl.pathname || "/");
     return NextResponse.redirect(login);
   }
 }
