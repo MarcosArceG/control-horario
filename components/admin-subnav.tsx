@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const links = [
   { href: "/admin/users", label: "Usuarios" },
   { href: "/admin/time-logs", label: "Registro horario" },
+  { href: "/admin/vacaciones", label: "Vacaciones" },
   { href: "/admin/corrections", label: "Correcciones" },
   { href: "/admin/export", label: "Exportar horas" },
   { href: "/admin/audit", label: "Auditoría" },

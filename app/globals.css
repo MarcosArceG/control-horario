@@ -33,3 +33,16 @@ body {
     padding-right: env(safe-area-inset-right);
   }
 }
+
+/* Calendario nativo: icono más grande y zona fácil de pulsar */
+input[type="date"].date-picker-input::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0.2rem;
+  opacity: 1;
+}
+
+input[type="date"].date-picker-input::-moz-calendar-picker-indicator {
+  cursor: pointer;
+}

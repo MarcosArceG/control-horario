@@ -15,6 +15,7 @@ const authMiddleware = auth((req) => {
   if (
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/corrections") ||
+    pathname.startsWith("/vacaciones") ||
     pathname.startsWith("/admin")
   ) {
     if (!loggedIn) {
@@ -53,6 +54,8 @@ export const config = {
     "/dashboard/:path*",
     "/corrections",
     "/corrections/:path*",
+    "/vacaciones",
+    "/vacaciones/:path*",
     "/admin",
     "/admin/:path*",
     "/login",

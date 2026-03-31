@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
    * rutas, CSS y el fallback `/_error` → "missing required error components".
    */
   outputFileTracingRoot: path.join(__dirname),
+  /** Los navegadores piden /favicon.ico por defecto; servimos el mismo PNG que PWA. */
+  async rewrites() {
+    return [{ source: "/favicon.ico", destination: "/icono.png" }];
+  },
 };
 
 export default nextConfig;

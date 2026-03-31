@@ -12,7 +12,7 @@ export default function AdminLayout({
           Administración
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          Gestiona usuarios, revisa correcciones y exporta informes.
+          Gestiona usuarios, vacaciones, revisa correcciones y exporta informes.
         </p>
       </div>
       <AdminSubnav />

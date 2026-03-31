@@ -14,20 +14,24 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const metadataBaseUrl = (() => {
+  const u = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (u) return new URL(u.replace(/\/$/, ""));
+  if (process.env.VERCEL_URL)
+    return new URL(`https://${process.env.VERCEL_URL}`);
+  return undefined;
+})();
+
 export const metadata: Metadata = {
+  ...(metadataBaseUrl ? { metadataBase: metadataBaseUrl } : {}),
   title: "Control Horario",
   description:
     "Registro de entradas y salidas con correcciones y auditoría.",
   applicationName: "Control Horario",
   icons: {
-    icon: [
-      { url: "/icono.png", type: "image/png", sizes: "192x192" },
-      { url: "/icono.png", type: "image/png", sizes: "512x512" },
-    ],
-    apple: [
-      { url: "/icono.png", type: "image/png", sizes: "180x180" },
-    ],
+    icon: [{ url: "/icono.png", type: "image/png", sizes: "32x32" }],
     shortcut: "/icono.png",
+    apple: [{ url: "/icono.png", type: "image/png", sizes: "180x180" }],
   },
   formatDetection: {
     telephone: false,

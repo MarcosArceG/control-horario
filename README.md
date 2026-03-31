@@ -1,6 +1,6 @@
 # Control Horario
 
-Aplicación de control horario con Next.js (App Router), PostgreSQL, Prisma y acceso por correo y contraseña. Roles: **SUPERADMIN** (definidos solo en la variable de entorno `SUPERADMIN_ACCOUNTS`) y **USER** (creados desde el panel de administración). El tiempo trabajado se **calcula a partir de eventos** (`CLOCK_IN`, `CLOCK_OUT`; en datos antiguos pueden existir `BREAK_*`); no se guarda como total acumulado. Los **eventos son solo altas**; los cambios pasan por **solicitudes de corrección** revisadas por administradores. El **registro de auditoría** guarda acciones de seguridad y datos.
+Aplicación de control horario con Next.js (App Router), PostgreSQL, Prisma y acceso por correo y contraseña. Roles: **SUPERADMIN** (definidos solo en la variable de entorno `SUPERADMIN_ACCOUNTS`) y **USER** (creados desde el panel de administración). El tiempo trabajado se **calcula a partir de eventos** (`CLOCK_IN`, `CLOCK_OUT`; en datos antiguos pueden existir `BREAK_*`); no se guarda como total acumulado. Los **eventos son solo altas**; los cambios pasan por **solicitudes de corrección** revisadas por administradores. Las **vacaciones** (22 días laborables al año natural) las registra el administrador; los empleados consultan lo disfrutado. El **registro de auditoría** guarda acciones de seguridad y datos.
 
 ## Requisitos
 

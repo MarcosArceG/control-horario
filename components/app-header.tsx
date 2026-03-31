@@ -39,6 +39,14 @@ export async function AppHeader() {
           >
             Correcciones
           </Link>
+          {!isAdmin ? (
+            <Link
+              href="/vacaciones"
+              className="shrink-0 rounded-md px-1 py-1.5 hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+            >
+              Vacaciones
+            </Link>
+          ) : null}
           {isAdmin ? (
             <Link
               href="/admin/users"
