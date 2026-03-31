@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPERADMIN
+  USER
+}
+
+enum TimeEventType {
+  CLOCK_IN
+  CLOCK_OUT
+  BREAK_START
+  BREAK_END
+}
+
+enum CorrectionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  timeEvents               TimeEvent[]
+  timeCorrectionsAsSubject TimeCorrection[] @relation("CorrectionSubject")
+  correctionsRequested     TimeCorrection[] @relation("CorrectionRequester")
+  correctionsReviewed      TimeCorrection[] @relation("CorrectionReviewer")
+  auditLogs                AuditLog[]
+}
+
+model TimeEvent {
+  id         String        @id @default(cuid())
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type       TimeEventType
+  occurredAt DateTime
+  createdAt  DateTime      @default(now())
+
+  corrections TimeCorrection[]
+
+  @@index([userId, occurredAt])
+}
+
+model TimeCorrection {
+  id                 String           @id @default(cuid())
+  userId             String
+  subject            User             @relation("CorrectionSubject", fields: [userId], references: [id], onDelete: Cascade)
+  timeEventId        String
+  timeEvent          TimeEvent        @relation(fields: [timeEventId], references: [id], onDelete: Cascade)
+  proposedOccurredAt DateTime
+  reason             String
+  status             CorrectionStatus @default(PENDING)
+  requestedById      String
+  requestedBy        User             @relation("CorrectionRequester", fields: [requestedById], references: [id])
+  reviewedById       String?
+  reviewedBy         User?            @relation("CorrectionReviewer", fields: [reviewedById], references: [id])
+  reviewedAt         DateTime?
+  reviewNote         String?
+  createdAt          DateTime         @default(now())
+
+  @@index([status])
+  @@index([userId])
+  @@index([timeEventId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([actorId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
