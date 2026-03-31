@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { auth, signOut } from "@/lib/auth";
 import type { Session } from "next-auth";
 import { redirect, unstable_rethrow } from "next/navigation";
 
@@ -40,25 +40,44 @@ export async function sessionSuperadminOrThrow(): Promise<SessionUser> {
   return user;
 }
 
+/** URL de login tras cerrar sesión (absoluta si hay AUTH_URL / NEXT_PUBLIC_APP_URL). */
+function buildLoginCallbackUrl(): string {
+  const base =
+    process.env.AUTH_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (base) {
+    return `${base.replace(/\/$/, "")}/login`;
+  }
+  return "/login";
+}
+
 /**
- * Para loaders llamados desde Server Components: sin sesión → /login.
- * Evita tumbar el render con "No autorizado" (en prod el mensaje no se muestra).
+ * Cierra sesión con POST interno (Auth.js) y redirige a /login. Úsalo cuando la
+ * sesión no es válida en RSC pero el middleware aún ve cookie: evita el bucle
+ * login ↔ dashboard (ERR_TOO_MANY_REDIRECTS).
+ */
+export async function redirectToLoginClearingSession(): Promise<never> {
+  await signOut({ redirectTo: buildLoginCallbackUrl() });
+  throw new Error("signOut debería redirigir");
+}
+
+/**
+ * Para loaders llamados desde Server Components: sin sesión válida → signout y login.
  */
 export async function sessionUserOrRedirect(): Promise<SessionUser> {
   const session = await authSafe();
   if (!session?.user?.id) {
-    redirect("/login");
+    await redirectToLoginClearingSession();
   }
-  return session.user as SessionUser;
+  return session!.user as SessionUser;
 }
 
-/** Sin sesión → /login; usuario normal en ruta admin → /dashboard */
+/** Sin sesión → signout + login; usuario normal en ruta admin → /dashboard */
 export async function sessionSuperadminOrRedirect(): Promise<SessionUser> {
   const session = await authSafe();
   if (!session?.user?.id) {
-    redirect("/login");
+    await redirectToLoginClearingSession();
   }
-  const user = session.user as SessionUser;
+  const user = session!.user as SessionUser;
   if (user.role !== "SUPERADMIN") {
     redirect("/dashboard");
   }
