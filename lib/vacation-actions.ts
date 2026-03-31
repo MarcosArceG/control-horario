@@ -1,9 +1,11 @@
 "use server";
 
-import { auth } from "@/lib/auth";
+import {
+  sessionSuperadminOrThrow,
+  sessionUserOrThrow,
+} from "@/lib/auth-safe";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit";
-import type { Session } from "next-auth";
 import type { VacationStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import {
@@ -20,17 +22,6 @@ function dateFieldToYMD(d: Date): string {
   const m = d.getUTCMonth() + 1;
   const day = d.getUTCDate();
   return `${y}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
-function assertUser(session: Session | null) {
-  if (!session?.user?.id) throw new Error("No autorizado.");
-  return session.user;
-}
-
-function assertSuperadmin(session: Session | null) {
-  const u = assertUser(session);
-  if (u.role !== "SUPERADMIN") throw new Error("Acceso denegado.");
-  return u;
 }
 
 function affectedYears(start: Date, end: Date): number[] {
@@ -144,8 +135,7 @@ function toDTO(e: {
 }
 
 export async function getMyVacationSummary(year: number) {
-  const session = await auth();
-  const user = assertUser(session);
+  const user = await sessionUserOrThrow();
   if (!Number.isInteger(year) || year < 2000 || year > 2100) {
     throw new Error("Año no válido.");
   }
@@ -184,8 +174,7 @@ export async function getMyVacationSummary(year: number) {
 }
 
 export async function getAdminVacationUsers() {
-  const session = await auth();
-  assertSuperadmin(session);
+  await sessionSuperadminOrThrow();
 
   return prisma.user.findMany({
     where: { role: "USER" },
@@ -195,8 +184,7 @@ export async function getAdminVacationUsers() {
 }
 
 export async function getAdminVacationEntries(userId: string, year: number) {
-  const session = await auth();
-  assertSuperadmin(session);
+  await sessionSuperadminOrThrow();
 
   if (!userId?.trim()) throw new Error("Selecciona un empleado.");
   if (!Number.isInteger(year) || year < 2000 || year > 2100) {
@@ -247,8 +235,7 @@ export async function adminCreateVacation(input: {
   startDate: string;
   endDate: string;
 }) {
-  const session = await auth();
-  const actor = assertSuperadmin(session);
+  const actor = await sessionSuperadminOrThrow();
 
   const start = parseDateInput(input.startDate);
   const end = parseDateInput(input.endDate);
@@ -292,8 +279,7 @@ export async function adminCreateVacation(input: {
 }
 
 export async function adminApproveVacation(id: string) {
-  const session = await auth();
-  const actor = assertSuperadmin(session);
+  const actor = await sessionSuperadminOrThrow();
 
   const row = await prisma.vacationEntry.findUnique({ where: { id } });
   if (!row) throw new Error("Registro no encontrado.");
@@ -322,8 +308,7 @@ export async function adminApproveVacation(id: string) {
 }
 
 export async function adminDeleteVacation(id: string) {
-  const session = await auth();
-  const actor = assertSuperadmin(session);
+  const actor = await sessionSuperadminOrThrow();
 
   const row = await prisma.vacationEntry.findUnique({ where: { id } });
   if (!row) throw new Error("Registro no encontrado.");
@@ -346,8 +331,7 @@ export async function adminSetUserVacationDays(input: {
   userId: string;
   vacationDaysPerYear: number;
 }) {
-  const session = await auth();
-  const actor = assertSuperadmin(session);
+  const actor = await sessionSuperadminOrThrow();
 
   const n = input.vacationDaysPerYear;
   if (!Number.isInteger(n) || n < 0 || n > 366) {

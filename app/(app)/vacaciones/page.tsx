@@ -1,10 +1,10 @@
-import { auth } from "@/lib/auth";
+import { authSafe } from "@/lib/auth-safe";
 import { redirect } from "next/navigation";
 import { getMyVacationSummary } from "@/lib/vacation-actions";
 import { MyVacationsPanel } from "@/components/vacations/my-vacations-panel";
 
 export default async function VacacionesPage() {
-  const session = await auth();
+  const session = await authSafe();
   if (!session?.user) redirect("/login");
   if (session.user.role === "SUPERADMIN") redirect("/admin/vacaciones");
 

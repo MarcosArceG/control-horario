@@ -8,4 +8,5 @@ export const prisma =
     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+/** Reutilizar en serverless (Vercel) para no abrir demasiadas conexiones a la vez. */
+globalForPrisma.prisma = prisma;

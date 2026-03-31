@@ -1,7 +1,7 @@
 "use server";
 
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { sessionSuperadminOrThrow, sessionUserOrThrow } from "@/lib/auth-safe";
 import { writeAuditLog } from "@/lib/audit";
 import {
   deriveSessionState,
@@ -16,16 +16,10 @@ import {
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import type { TimeEventType } from "@prisma/client";
-import type { Session } from "next-auth";
 import {
   envSuperadminCount,
   isEnvSuperadminEmail,
 } from "@/lib/superadmin-env";
-
-function assertUser(session: Session | null) {
-  if (!session?.user?.id) throw new Error("No autorizado.");
-  return session.user;
-}
 
 const TARGET_DAY_MS = 8 * 60 * 60 * 1000;
 const TARGET_WEEK_MS = 40 * 60 * 60 * 1000;
@@ -123,14 +117,12 @@ async function computeDashboardMetrics(userId: string): Promise<DashboardLiveMet
 
 /** Actualiza métricas del panel sin recargar (llamada desde el cliente). */
 export async function getDashboardLiveMetrics(): Promise<DashboardLiveMetrics> {
-  const session = await auth();
-  const user = assertUser(session);
+  const user = await sessionUserOrThrow();
   return computeDashboardMetrics(user.id);
 }
 
 export async function getDashboardData() {
-  const session = await auth();
-  const user = assertUser(session);
+  const user = await sessionUserOrThrow();
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
     select: { name: true, email: true },
@@ -149,8 +141,7 @@ export async function getDashboardData() {
 }
 
 export async function registerClockEvent(type: TimeEventType) {
-  const session = await auth();
-  const user = assertUser(session);
+  const user = await sessionUserOrThrow();
 
   const events = await prisma.timeEvent.findMany({
     where: { userId: user.id },
@@ -207,8 +198,7 @@ export async function requestTimeCorrection(input: {
   proposedOccurredAt: string;
   reason: string;
 }) {
-  const session = await auth();
-  const user = assertUser(session);
+  const user = await sessionUserOrThrow();
 
   const event = await prisma.timeEvent.findFirst({
     where: { id: input.timeEventId, userId: user.id },
@@ -249,9 +239,7 @@ export async function adminCreateUser(input: {
   password: string;
   name?: string;
 }) {
-  const session = await auth();
-  const actor = assertUser(session);
-  if (actor.role !== "SUPERADMIN") throw new Error("Acceso denegado.");
+  const actor = await sessionSuperadminOrThrow();
 
   const email = input.email.trim().toLowerCase();
   if (!email || !input.password || input.password.length < 8) {
@@ -293,9 +281,7 @@ export async function adminReviewCorrection(
   decision: "APPROVED" | "REJECTED",
   reviewNote?: string,
 ) {
-  const session = await auth();
-  const actor = assertUser(session);
-  if (actor.role !== "SUPERADMIN") throw new Error("Acceso denegado.");
+  const actor = await sessionSuperadminOrThrow();
 
   const existing = await prisma.timeCorrection.findUnique({
     where: { id: correctionId },
@@ -335,8 +321,7 @@ export async function adminReviewCorrection(
 }
 
 export async function getMyTimeEventsForCorrections() {
-  const session = await auth();
-  const user = assertUser(session);
+  const user = await sessionUserOrThrow();
   return prisma.timeEvent.findMany({
     where: { userId: user.id },
     orderBy: { occurredAt: "desc" },
@@ -345,8 +330,7 @@ export async function getMyTimeEventsForCorrections() {
 }
 
 export async function getMyCorrectionRequests() {
-  const session = await auth();
-  const user = assertUser(session);
+  const user = await sessionUserOrThrow();
   const [pending, past] = await Promise.all([
     prisma.timeCorrection.findMany({
       where: { userId: user.id, status: "PENDING" },
@@ -367,9 +351,7 @@ export async function getMyCorrectionRequests() {
 }
 
 export async function getAdminTimeLogs() {
-  const session = await auth();
-  const user = assertUser(session);
-  if (user.role !== "SUPERADMIN") throw new Error("Acceso denegado.");
+  await sessionSuperadminOrThrow();
 
   return prisma.timeEvent.findMany({
     orderBy: { occurredAt: "desc" },
@@ -381,9 +363,7 @@ export async function getAdminTimeLogs() {
 }
 
 export async function getAdminPendingCorrections() {
-  const session = await auth();
-  const user = assertUser(session);
-  if (user.role !== "SUPERADMIN") throw new Error("Acceso denegado.");
+  await sessionSuperadminOrThrow();
 
   return prisma.timeCorrection.findMany({
     where: { status: "PENDING" },
@@ -397,9 +377,7 @@ export async function getAdminPendingCorrections() {
 }
 
 export async function getAdminUsers() {
-  const session = await auth();
-  const user = assertUser(session);
-  if (user.role !== "SUPERADMIN") throw new Error("Acceso denegado.");
+  await sessionSuperadminOrThrow();
 
   return prisma.user.findMany({
     orderBy: { email: "asc" },
@@ -408,9 +386,7 @@ export async function getAdminUsers() {
 }
 
 export async function adminDeleteUser(userId: string) {
-  const session = await auth();
-  const actor = assertUser(session);
-  if (actor.role !== "SUPERADMIN") throw new Error("Acceso denegado.");
+  const actor = await sessionSuperadminOrThrow();
   if (actor.id === userId) {
     throw new Error("No puedes eliminar tu propia cuenta.");
   }
@@ -456,9 +432,7 @@ export async function adminDeleteUser(userId: string) {
 }
 
 export async function getAdminAuditLogs() {
-  const session = await auth();
-  const user = assertUser(session);
-  if (user.role !== "SUPERADMIN") throw new Error("Acceso denegado.");
+  await sessionSuperadminOrThrow();
 
   return prisma.auditLog.findMany({
     orderBy: { createdAt: "desc" },
@@ -473,9 +447,7 @@ export async function exportWorkedHoursCsv(input: {
   /** Si se indica, solo ese trabajador; si no, todos. */
   userId?: string | null;
 }) {
-  const session = await auth();
-  const user = assertUser(session);
-  if (user.role !== "SUPERADMIN") throw new Error("Acceso denegado.");
+  const user = await sessionSuperadminOrThrow();
 
   const from = new Date(input.from);
   const to = new Date(input.to);

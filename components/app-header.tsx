@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { auth } from "@/lib/auth";
+import { authSafe } from "@/lib/auth-safe";
 import { LogoutButton } from "@/components/logout-button";
 
 export async function AppHeader() {
-  const session = await auth();
+  const session = await authSafe();
   if (!session?.user) return null;
 
   const isAdmin = session.user.role === "SUPERADMIN";

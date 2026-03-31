@@ -21,6 +21,11 @@ export default function Error({
       <p className="max-w-md text-center text-sm text-slate-600 dark:text-slate-400">
         {error.message || "Error inesperado al cargar la página."}
       </p>
+      {error.digest ? (
+        <p className="font-mono text-xs text-slate-500 dark:text-slate-500">
+          Referencia: {error.digest}
+        </p>
+      ) : null}
       <button
         type="button"
         onClick={() => reset()}

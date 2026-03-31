@@ -1,7 +1,8 @@
 import { CreateUserForm } from "@/components/create-user-form";
 import { DeleteUserButton } from "@/components/delete-user-button";
 import { getAdminUsers } from "@/lib/actions";
-import { auth } from "@/lib/auth";
+import { authSafe } from "@/lib/auth-safe";
+import { redirect } from "next/navigation";
 import { formatFecha } from "@/lib/locale";
 import { etiquetaRol } from "@/lib/labels-es";
 import {
@@ -10,7 +11,8 @@ import {
 } from "@/lib/superadmin-env";
 
 export default async function AdminUsersPage() {
-  const session = await auth();
+  const session = await authSafe();
+  if (!session?.user) redirect("/login");
   const users = await getAdminUsers();
   const superAdminCount = users.filter((u) => u.role === "SUPERADMIN").length;
   const envSuperAdmins = envSuperadminCount();
