@@ -22,5 +22,14 @@ export function register() {
       "[control-horario] AUTH_URL no está definida. En producción conviene " +
         "AUTH_URL=https://<tu-dominio> (misma URL pública que usa el navegador).",
     );
+  } else if (
+    url?.trim() &&
+    url.trim().toLowerCase().startsWith("http://") &&
+    (process.env.VERCEL || process.env.NODE_ENV === "production")
+  ) {
+    console.error(
+      "[control-horario] AUTH_URL usa http:// pero el sitio en producción es https://. " +
+        "Eso provoca fallos de Auth.js (/api/auth/error). Usa https:// + tu dominio público.",
+    );
   }
 }
