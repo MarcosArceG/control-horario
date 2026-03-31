@@ -3,6 +3,8 @@ import Credentials from "next-auth/providers/credentials";
 import type { Role } from "@prisma/client";
 
 export const authConfig = {
+  /** Obligatorio en producción; sin esto Auth.js devuelve /api/auth/error "Server error". */
+  secret: process.env.AUTH_SECRET,
   trustHost: true,
   session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 7 },
   pages: { signIn: "/login" },
