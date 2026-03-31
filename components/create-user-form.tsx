@@ -32,10 +32,6 @@ export function CreateUserForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
-      <p className="text-sm text-slate-500">
-        Solo se crean <strong className="text-slate-700 dark:text-slate-300">usuarios</strong>. Los superadministradores se configuran en{" "}
-        <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">SUPERADMIN_ACCOUNTS</code> (entorno).
-      </p>
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-medium text-slate-700 dark:text-slate-300">
           Correo electrónico

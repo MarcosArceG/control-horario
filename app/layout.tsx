@@ -24,10 +24,10 @@ const metadataBaseUrl = (() => {
 
 export const metadata: Metadata = {
   ...(metadataBaseUrl ? { metadataBase: metadataBaseUrl } : {}),
-  title: "Control Horario",
+  title: "Triclock",
   description:
-    "Registro de entradas y salidas con correcciones y auditoría.",
-  applicationName: "Control Horario",
+    "Triclock: control horario con correcciones y registro de actividad.",
+  applicationName: "Triclock",
   icons: {
     icon: [{ url: "/icono.png", type: "image/png", sizes: "32x32" }],
     shortcut: "/icono.png",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: "Control Horario",
+    title: "Triclock",
     statusBarStyle: "default",
   },
 };

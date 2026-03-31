@@ -58,6 +58,8 @@ export function etiquetaAccionAuditoria(action: string): string {
       return "Usuario eliminado";
     case "CSV_EXPORT_WORKED_HOURS":
       return "Exportación de horas trabajadas";
+    case "VACATION_ENTITLEMENT_SET":
+      return "Tope de vacaciones actualizado";
     default:
       return action;
   }

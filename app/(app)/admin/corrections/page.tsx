@@ -9,11 +9,7 @@ export default async function AdminCorrectionsPage() {
       <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
         Correcciones pendientes
       </h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Al aprobar, se usa la hora propuesta al calcular el tiempo trabajado.
-        Los eventos no se modifican; las correcciones se aplican en el cálculo.
-      </p>
-      <div className="mt-6">
+      <div className="mt-4">
         <CorrectionReviewList rows={pending} />
       </div>
     </div>

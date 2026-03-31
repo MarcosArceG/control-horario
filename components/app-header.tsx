@@ -16,7 +16,7 @@ export async function AppHeader() {
             href="/dashboard"
             className="min-w-0 shrink truncate text-base font-semibold tracking-tight text-slate-900 dark:text-slate-50 sm:text-lg"
           >
-            Control Horario
+            Triclock
           </Link>
           <div className="shrink-0 sm:hidden">
             <LogoutButton />

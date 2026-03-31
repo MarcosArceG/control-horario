@@ -10,11 +10,7 @@ export default async function AdminTimeLogsPage() {
       <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
         Todos los registros
       </h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Registro de solo lectura. Las correcciones siguen el flujo de
-        aprobación.
-      </p>
-      <div className="mt-6 overflow-x-auto">
+      <div className="mt-4 overflow-x-auto">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead>
             <tr className="border-b border-slate-200 text-slate-500 dark:border-slate-800">

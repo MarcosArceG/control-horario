@@ -9,7 +9,7 @@ const links = [
   { href: "/admin/vacaciones", label: "Vacaciones" },
   { href: "/admin/corrections", label: "Correcciones" },
   { href: "/admin/export", label: "Exportar horas" },
-  { href: "/admin/audit", label: "Auditoría" },
+  { href: "/admin/audit", label: "Logs" },
 ] as const;
 
 export function AdminSubnav() {

@@ -22,11 +22,7 @@ export default async function AdminUsersPage() {
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
           Crear usuario
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Las cuentas nuevas usan la contraseña que indiques aquí; compártela de
-          forma segura.
-        </p>
-        <div className="mt-6 max-w-md">
+        <div className="mt-4 max-w-md">
           <CreateUserForm />
         </div>
       </section>
@@ -35,12 +31,6 @@ export default async function AdminUsersPage() {
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
           Todos los usuarios
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Eliminar una cuenta borra sus registros horarios y datos asociados.
-          No puedes eliminarte a ti mismo, ni un correo definido en{" "}
-          <code className="rounded bg-slate-100 px-1 dark:bg-slate-800">SUPERADMIN_ACCOUNTS</code>
-          , ni al único superadministrador si no hay cuentas en el entorno.
-        </p>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[560px] text-left text-sm">
             <thead>

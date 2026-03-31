@@ -32,13 +32,15 @@ enum VacationStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String
-  name         String?
-  role         Role     @default(USER)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                   String   @id @default(cuid())
+  email                String   @unique
+  passwordHash         String
+  name                 String?
+  role                 Role     @default(USER)
+  /** Días naturales de vacaciones por año natural (p. ej. menos si incorporación a mitad de año). */
+  vacationDaysPerYear  Int      @default(30)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   timeEvents               TimeEvent[]
   timeCorrectionsAsSubject TimeCorrection[] @relation("CorrectionSubject")

@@ -1,23 +1,22 @@
-/** Días laborables de vacaciones al año (lunes a viernes). */
-export const VACATION_DAYS_PER_YEAR = 22;
+/** Días naturales de vacaciones al año (calendario). */
+export const VACATION_DAYS_PER_YEAR = 30;
 
-/** Cuenta lunes–viernes entre dos fechas (inclusive). Fechas en calendario UTC (DATE de PostgreSQL). */
-export function countWorkingDaysInclusive(start: Date, end: Date): number {
+/** Cuenta todos los días del calendario entre dos fechas (inclusive). Fechas en calendario UTC (DATE de PostgreSQL). */
+export function countCalendarDaysInclusive(start: Date, end: Date): number {
   const t0 = start.getTime();
   const t1 = end.getTime();
   if (t0 > t1) return 0;
   let n = 0;
   const cur = new Date(start);
   while (cur.getTime() <= t1) {
-    const dow = cur.getUTCDay();
-    if (dow !== 0 && dow !== 6) n++;
+    n++;
     cur.setUTCDate(cur.getUTCDate() + 1);
   }
   return n;
 }
 
-/** Días laborables del tramo que caen en el año natural indicado. */
-export function workingDaysInCalendarYear(
+/** Días naturales del tramo que caen en el año natural indicado. */
+export function calendarDaysInCalendarYear(
   year: number,
   start: Date,
   end: Date,
@@ -26,7 +25,7 @@ export function workingDaysInCalendarYear(
   const yEnd = new Date(Date.UTC(year, 11, 31));
   const lo = start > yStart ? start : yStart;
   const hi = end < yEnd ? end : yEnd;
-  return countWorkingDaysInclusive(lo, hi);
+  return countCalendarDaysInclusive(lo, hi);
 }
 
 export function parseDateInput(isoDate: string): Date {

@@ -7,11 +7,11 @@ import type { Session } from "next-auth";
 import type { VacationStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import {
-  countWorkingDaysInclusive,
+  calendarDaysInCalendarYear,
+  countCalendarDaysInclusive,
   parseDateInput,
   rangesOverlap,
   VACATION_DAYS_PER_YEAR,
-  workingDaysInCalendarYear,
 } from "@/lib/vacation-days";
 
 /** Fecha DATE de PostgreSQL → YYYY-MM-DD (UTC calendario). */
@@ -44,6 +44,15 @@ function affectedYears(start: Date, end: Date): number[] {
   return ys;
 }
 
+async function getVacationLimitForUser(userId: string): Promise<number> {
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { vacationDaysPerYear: true },
+  });
+  if (!u) throw new Error("Usuario no encontrado.");
+  return u.vacationDaysPerYear;
+}
+
 async function sumApprovedDaysInYear(
   userId: string,
   year: number,
@@ -58,7 +67,7 @@ async function sumApprovedDaysInYear(
   });
   let sum = 0;
   for (const e of entries) {
-    sum += workingDaysInCalendarYear(year, e.startDate, e.endDate);
+    sum += calendarDaysInCalendarYear(year, e.startDate, e.endDate);
   }
   return sum;
 }
@@ -69,12 +78,13 @@ async function assertApprovedFitsLimit(
   end: Date,
   excludeId?: string,
 ) {
+  const limit = await getVacationLimitForUser(userId);
   for (const y of affectedYears(start, end)) {
     const current = await sumApprovedDaysInYear(userId, y, excludeId);
-    const add = workingDaysInCalendarYear(y, start, end);
-    if (current + add > VACATION_DAYS_PER_YEAR) {
+    const add = calendarDaysInCalendarYear(y, start, end);
+    if (current + add > limit) {
       throw new Error(
-        `Supera el máximo de ${VACATION_DAYS_PER_YEAR} días laborables en ${y} (ya hay ${current} días registrados).`,
+        `Supera el máximo de ${limit} días naturales en ${y} (ya hay ${current} días registrados).`,
       );
     }
   }
@@ -106,7 +116,7 @@ export type VacationEntryDTO = {
   userId: string;
   startDate: string;
   endDate: string;
-  workingDays: number;
+  calendarDays: number;
   status: VacationStatus;
   note: string | null;
   createdAt: string;
@@ -126,7 +136,7 @@ function toDTO(e: {
     userId: e.userId,
     startDate: dateFieldToYMD(e.startDate),
     endDate: dateFieldToYMD(e.endDate),
-    workingDays: countWorkingDaysInclusive(e.startDate, e.endDate),
+    calendarDays: countCalendarDaysInclusive(e.startDate, e.endDate),
     status: e.status,
     note: e.note,
     createdAt: e.createdAt.toISOString(),
@@ -139,6 +149,12 @@ export async function getMyVacationSummary(year: number) {
   if (!Number.isInteger(year) || year < 2000 || year > 2100) {
     throw new Error("Año no válido.");
   }
+
+  const me = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { vacationDaysPerYear: true },
+  });
+  const entitlement = me?.vacationDaysPerYear ?? VACATION_DAYS_PER_YEAR;
 
   const approvedDaysInYear = await sumApprovedDaysInYear(user.id, year);
 
@@ -160,8 +176,9 @@ export async function getMyVacationSummary(year: number) {
 
   return {
     year,
+    entitlement,
     approvedDaysInYear,
-    remaining: Math.max(0, VACATION_DAYS_PER_YEAR - approvedDaysInYear),
+    remaining: Math.max(0, entitlement - approvedDaysInYear),
     calendarSpans,
   };
 }
@@ -173,7 +190,7 @@ export async function getAdminVacationUsers() {
   return prisma.user.findMany({
     where: { role: "USER" },
     orderBy: { email: "asc" },
-    select: { id: true, email: true, name: true },
+    select: { id: true, email: true, name: true, vacationDaysPerYear: true },
   });
 }
 
@@ -188,6 +205,12 @@ export async function getAdminVacationEntries(userId: string, year: number) {
 
   const target = await prisma.user.findFirst({
     where: { id: userId, role: "USER" },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      vacationDaysPerYear: true,
+    },
   });
   if (!target) throw new Error("Empleado no encontrado.");
 
@@ -209,9 +232,9 @@ export async function getAdminVacationEntries(userId: string, year: number) {
   return {
     user: { id: target.id, email: target.email, name: target.name },
     year,
-    entitlement: VACATION_DAYS_PER_YEAR,
+    entitlement: target.vacationDaysPerYear,
     approvedDaysInYear,
-    remaining: Math.max(0, VACATION_DAYS_PER_YEAR - approvedDaysInYear),
+    remaining: Math.max(0, target.vacationDaysPerYear - approvedDaysInYear),
     entries: entries.map((e) => ({
       ...toDTO(e),
       createdByEmail: e.createdBy?.email ?? null,
@@ -313,6 +336,41 @@ export async function adminDeleteVacation(id: string) {
     entityType: "VacationEntry",
     entityId: id,
     metadata: { subjectUserId: row.userId },
+  });
+
+  revalidatePath("/admin/vacaciones");
+  revalidatePath("/vacaciones");
+}
+
+export async function adminSetUserVacationDays(input: {
+  userId: string;
+  vacationDaysPerYear: number;
+}) {
+  const session = await auth();
+  const actor = assertSuperadmin(session);
+
+  const n = input.vacationDaysPerYear;
+  if (!Number.isInteger(n) || n < 0 || n > 366) {
+    throw new Error("El tope debe ser un número entero entre 0 y 366.");
+  }
+
+  const target = await prisma.user.findFirst({
+    where: { id: input.userId, role: "USER" },
+    select: { id: true },
+  });
+  if (!target) throw new Error("Empleado no encontrado.");
+
+  await prisma.user.update({
+    where: { id: input.userId },
+    data: { vacationDaysPerYear: n },
+  });
+
+  await writeAuditLog({
+    actorId: actor.id,
+    action: "VACATION_ENTITLEMENT_SET",
+    entityType: "User",
+    entityId: input.userId,
+    metadata: { vacationDaysPerYear: n },
   });
 
   revalidatePath("/admin/vacaciones");

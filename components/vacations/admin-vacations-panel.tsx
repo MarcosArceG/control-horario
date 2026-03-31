@@ -1,19 +1,26 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import type { VacationStatus } from "@prisma/client";
 import {
   adminApproveVacation,
   adminCreateVacation,
   adminDeleteVacation,
+  adminSetUserVacationDays,
   getAdminVacationEntries,
 } from "@/lib/vacation-actions";
+import { VACATION_DAYS_PER_YEAR } from "@/lib/vacation-days";
 import { DatePickerField } from "@/components/date-picker-field";
 import { VacationCalendar } from "@/components/vacations/vacation-calendar";
 import { formatFecha } from "@/lib/locale";
 
-type UserOpt = { id: string; email: string; name: string | null };
+type UserOpt = {
+  id: string;
+  email: string;
+  name: string | null;
+  vacationDaysPerYear: number;
+};
 
 type Initial = Awaited<ReturnType<typeof getAdminVacationEntries>>;
 
@@ -42,6 +49,13 @@ export function AdminVacationsPanel({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ start: "", end: "" });
+  const [entitlementDraft, setEntitlementDraft] = useState("");
+
+  useEffect(() => {
+    if (data?.entitlement != null) {
+      setEntitlementDraft(String(data.entitlement));
+    }
+  }, [data?.entitlement, data?.user.id]);
 
   function load(uid: string, y: number) {
     if (!uid) {
@@ -68,6 +82,25 @@ export function AdminVacationsPanel({
   function onYearChange(y: number) {
     setYear(y);
     if (userId) load(userId, y);
+  }
+
+  function onSaveEntitlement(e: React.FormEvent) {
+    e.preventDefault();
+    if (!userId) return;
+    const n = Number.parseInt(entitlementDraft, 10);
+    if (!Number.isInteger(n) || n < 0 || n > 366) {
+      setError("El tope debe ser un entero entre 0 y 366.");
+      return;
+    }
+    startTransition(async () => {
+      try {
+        setError(null);
+        await adminSetUserVacationDays({ userId, vacationDaysPerYear: n });
+        load(userId, year);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "No se pudo guardar el tope.");
+      }
+    });
   }
 
   function onCreate(e: React.FormEvent) {
@@ -169,15 +202,40 @@ export function AdminVacationsPanel({
                 {data.approvedDaysInYear}
               </p>
               <p className="mt-1 text-sm text-blue-800/90 dark:text-blue-200/90">
-                Días laborables disfrutados
+                Días naturales disfrutados
               </p>
             </div>
             <div className="rounded-2xl bg-slate-100 p-4 ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
               <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
                 {data.user.name ?? data.user.email}
               </p>
-              <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-                Tope anual: 22 días laborables
+              <form
+                onSubmit={onSaveEntitlement}
+                className="mt-3 flex flex-wrap items-end gap-2"
+              >
+                <label className="flex min-w-[8rem] flex-col gap-0.5 text-xs text-slate-600 dark:text-slate-400">
+                  Tope anual (días naturales)
+                  <input
+                    type="number"
+                    min={0}
+                    max={366}
+                    required
+                    value={entitlementDraft}
+                    onChange={(e) => setEntitlementDraft(e.target.value)}
+                    className="mt-0.5 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900 tabular-nums dark:border-slate-600 dark:bg-slate-950 dark:text-slate-100"
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-50 dark:bg-slate-600 dark:hover:bg-slate-500"
+                >
+                  Guardar tope
+                </button>
+              </form>
+              <p className="mt-2 text-xs text-slate-500">
+                Por defecto {VACATION_DAYS_PER_YEAR}; cámbialo si el empleado se
+                incorporó con el año ya empezado.
               </p>
             </div>
           </div>
@@ -224,7 +282,7 @@ export function AdminVacationsPanel({
                   <tr>
                     <th className="px-3 py-2 font-medium">Inicio</th>
                     <th className="px-3 py-2 font-medium">Fin</th>
-                    <th className="px-3 py-2 font-medium">Días lab.</th>
+                    <th className="px-3 py-2 font-medium">Días naturales</th>
                     <th className="px-3 py-2 font-medium">Estado</th>
                     <th className="px-3 py-2 font-medium" />
                   </tr>
@@ -238,7 +296,7 @@ export function AdminVacationsPanel({
                       <td className="px-3 py-2 tabular-nums">
                         {formatFecha(new Date(r.endDate + "T12:00:00Z"))}
                       </td>
-                      <td className="px-3 py-2">{r.workingDays}</td>
+                      <td className="px-3 py-2">{r.calendarDays}</td>
                       <td className="px-3 py-2">{statusLabel(r.status)}</td>
                       <td className="px-3 py-2">
                         <div className="flex flex-wrap gap-2">

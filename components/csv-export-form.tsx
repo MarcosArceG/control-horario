@@ -94,11 +94,6 @@ export function CsvExportForm({ users }: { users: UserOption[] }) {
           />
         </label>
       </div>
-      <p className="text-xs text-slate-500">
-        Las horas se calculan a partir de los eventos (y correcciones
-        aprobadas) por día natural en UTC dentro del rango. Puedes exportar
-        solo un trabajador o todos a la vez.
-      </p>
       {error ? (
         <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
       ) : null}

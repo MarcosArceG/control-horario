@@ -92,13 +92,16 @@ export function MyVacationsPanel({
           <p className="mt-1 text-sm text-teal-800/90 dark:text-teal-200/90">
             Días que te quedan ({data.year})
           </p>
+          <p className="mt-1 text-xs text-teal-700/80 dark:text-teal-300/80">
+            Tope anual: {data.entitlement} días naturales
+          </p>
         </div>
         <div className="rounded-2xl bg-blue-50 p-4 ring-1 ring-blue-100 dark:bg-blue-950/40 dark:ring-blue-900/50">
           <p className="text-2xl font-semibold tabular-nums text-blue-950 dark:text-blue-50">
             {data.approvedDaysInYear}
           </p>
           <p className="mt-1 text-sm text-blue-800/90 dark:text-blue-200/90">
-            Días laborables disfrutados
+            Días naturales disfrutados
           </p>
         </div>
       </div>

@@ -9,12 +9,7 @@ export default async function AdminExportPage() {
       <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
         Exportación de horas trabajadas
       </h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Archivo de valores separados por comas: una fila por día con horas
-        positivas. Elige un trabajador concreto o todos. Los valores se
-        calculan a partir de los registros, no de totales almacenados.
-      </p>
-      <div className="mt-6">
+      <div className="mt-4">
         <CsvExportForm
           users={users.map((u) => ({
             id: u.id,

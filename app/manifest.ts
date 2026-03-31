@@ -12,10 +12,10 @@ export default function manifest(): MetadataRoute.Manifest {
 
   return {
     ...(appUrl ? { id: `${appUrl}/` } : {}),
-    name: "Control Horario",
-    short_name: "Fichaje",
+    name: "Triclock",
+    short_name: "Triclock",
     description:
-      "Registro de entradas y salidas con correcciones y auditoría.",
+      "Triclock: control horario con correcciones y registro de actividad.",
     start_url: "/",
     scope: "/",
     lang: "es",
