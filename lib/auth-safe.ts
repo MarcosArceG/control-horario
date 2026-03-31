@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import type { Session } from "next-auth";
-import { unstable_rethrow } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 
 /** Usuario de sesión con id garantizado (p. ej. callbacks JWT). */
 export type SessionUser = NonNullable<Session["user"]> & { id: string };
@@ -36,6 +36,31 @@ export async function sessionSuperadminOrThrow(): Promise<SessionUser> {
   const user = await sessionUserOrThrow();
   if (user.role !== "SUPERADMIN") {
     throw new Error("Acceso denegado.");
+  }
+  return user;
+}
+
+/**
+ * Para loaders llamados desde Server Components: sin sesión → /login.
+ * Evita tumbar el render con "No autorizado" (en prod el mensaje no se muestra).
+ */
+export async function sessionUserOrRedirect(): Promise<SessionUser> {
+  const session = await authSafe();
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+  return session.user as SessionUser;
+}
+
+/** Sin sesión → /login; usuario normal en ruta admin → /dashboard */
+export async function sessionSuperadminOrRedirect(): Promise<SessionUser> {
+  const session = await authSafe();
+  if (!session?.user?.id) {
+    redirect("/login");
+  }
+  const user = session.user as SessionUser;
+  if (user.role !== "SUPERADMIN") {
+    redirect("/dashboard");
   }
   return user;
 }

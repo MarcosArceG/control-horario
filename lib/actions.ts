@@ -1,7 +1,12 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { sessionSuperadminOrThrow, sessionUserOrThrow } from "@/lib/auth-safe";
+import {
+  sessionSuperadminOrRedirect,
+  sessionSuperadminOrThrow,
+  sessionUserOrRedirect,
+  sessionUserOrThrow,
+} from "@/lib/auth-safe";
 import { writeAuditLog } from "@/lib/audit";
 import {
   deriveSessionState,
@@ -122,7 +127,7 @@ export async function getDashboardLiveMetrics(): Promise<DashboardLiveMetrics> {
 }
 
 export async function getDashboardData() {
-  const user = await sessionUserOrThrow();
+  const user = await sessionUserOrRedirect();
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
     select: { name: true, email: true },
@@ -321,7 +326,7 @@ export async function adminReviewCorrection(
 }
 
 export async function getMyTimeEventsForCorrections() {
-  const user = await sessionUserOrThrow();
+  const user = await sessionUserOrRedirect();
   return prisma.timeEvent.findMany({
     where: { userId: user.id },
     orderBy: { occurredAt: "desc" },
@@ -330,7 +335,7 @@ export async function getMyTimeEventsForCorrections() {
 }
 
 export async function getMyCorrectionRequests() {
-  const user = await sessionUserOrThrow();
+  const user = await sessionUserOrRedirect();
   const [pending, past] = await Promise.all([
     prisma.timeCorrection.findMany({
       where: { userId: user.id, status: "PENDING" },
@@ -351,7 +356,7 @@ export async function getMyCorrectionRequests() {
 }
 
 export async function getAdminTimeLogs() {
-  await sessionSuperadminOrThrow();
+  await sessionSuperadminOrRedirect();
 
   return prisma.timeEvent.findMany({
     orderBy: { occurredAt: "desc" },
@@ -363,7 +368,7 @@ export async function getAdminTimeLogs() {
 }
 
 export async function getAdminPendingCorrections() {
-  await sessionSuperadminOrThrow();
+  await sessionSuperadminOrRedirect();
 
   return prisma.timeCorrection.findMany({
     where: { status: "PENDING" },
@@ -377,7 +382,7 @@ export async function getAdminPendingCorrections() {
 }
 
 export async function getAdminUsers() {
-  await sessionSuperadminOrThrow();
+  await sessionSuperadminOrRedirect();
 
   return prisma.user.findMany({
     orderBy: { email: "asc" },
@@ -432,7 +437,7 @@ export async function adminDeleteUser(userId: string) {
 }
 
 export async function getAdminAuditLogs() {
-  await sessionSuperadminOrThrow();
+  await sessionSuperadminOrRedirect();
 
   return prisma.auditLog.findMany({
     orderBy: { createdAt: "desc" },
@@ -447,7 +452,7 @@ export async function exportWorkedHoursCsv(input: {
   /** Si se indica, solo ese trabajador; si no, todos. */
   userId?: string | null;
 }) {
-  const user = await sessionSuperadminOrThrow();
+  const user = await sessionSuperadminOrRedirect();
 
   const from = new Date(input.from);
   const to = new Date(input.to);

@@ -1,8 +1,9 @@
 "use server";
 
 import {
+  sessionSuperadminOrRedirect,
   sessionSuperadminOrThrow,
-  sessionUserOrThrow,
+  sessionUserOrRedirect,
 } from "@/lib/auth-safe";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit";
@@ -135,7 +136,7 @@ function toDTO(e: {
 }
 
 export async function getMyVacationSummary(year: number) {
-  const user = await sessionUserOrThrow();
+  const user = await sessionUserOrRedirect();
   if (!Number.isInteger(year) || year < 2000 || year > 2100) {
     throw new Error("Año no válido.");
   }
@@ -174,7 +175,7 @@ export async function getMyVacationSummary(year: number) {
 }
 
 export async function getAdminVacationUsers() {
-  await sessionSuperadminOrThrow();
+  await sessionSuperadminOrRedirect();
 
   return prisma.user.findMany({
     where: { role: "USER" },
@@ -184,7 +185,7 @@ export async function getAdminVacationUsers() {
 }
 
 export async function getAdminVacationEntries(userId: string, year: number) {
-  await sessionSuperadminOrThrow();
+  await sessionSuperadminOrRedirect();
 
   if (!userId?.trim()) throw new Error("Selecciona un empleado.");
   if (!Number.isInteger(year) || year < 2000 || year > 2100) {
