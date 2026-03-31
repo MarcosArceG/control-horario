@@ -19,6 +19,16 @@ export const metadata: Metadata = {
   description:
     "Registro de entradas y salidas con correcciones y auditoría.",
   applicationName: "Control Horario",
+  icons: {
+    icon: [
+      { url: "/icono.png", type: "image/png", sizes: "192x192" },
+      { url: "/icono.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [
+      { url: "/icono.png", type: "image/png", sizes: "180x180" },
+    ],
+    shortcut: "/icono.png",
+  },
   formatDetection: {
     telephone: false,
   },
