@@ -1,12 +1,34 @@
 /**
- * Superadministradores definidos solo en variables de entorno (varios pares email/contraseña).
- * Formato: SUPERADMIN_ACCOUNTS JSON array, p. ej.
- * [{"email":"admin@empresa.com","password":"secreto1"},{"email":"otro@empresa.com","password":"secreto2"}]
+ * Superadministradores solo en variables de entorno.
  *
- * También se acepta la clave `pass` como alias de `password` (útil si el JSON se acorta en paneles).
+ * 1) Recomendado en Vercel: pares numerados (sin JSON en una sola línea):
+ *    AUTH_USER_1_EMAIL, AUTH_USER_1_PASSWORD, AUTH_USER_2_EMAIL, ...
+ *
+ * 2) Opcional: SUPERADMIN_ACCOUNTS como JSON array (se fusiona; los numerados
+ *    tienen prioridad si el correo coincide).
  */
 
 export type EnvSuperadminAccount = { email: string; password: string };
+
+const MAX_NUMBERED_SUPERADMIN_SLOTS = 50;
+
+function parseSuperadminAccountsFromNumberedEnv(): EnvSuperadminAccount[] {
+  const out: EnvSuperadminAccount[] = [];
+  const seen = new Set<string>();
+  for (let n = 1; n <= MAX_NUMBERED_SUPERADMIN_SLOTS; n++) {
+    const emailRaw = process.env[`AUTH_USER_${n}_EMAIL`];
+    const passRaw = process.env[`AUTH_USER_${n}_PASSWORD`];
+    if (!emailRaw?.trim() || passRaw === undefined || passRaw.length === 0) {
+      continue;
+    }
+    const email = emailRaw.trim().toLowerCase();
+    if (!email) continue;
+    if (seen.has(email)) continue;
+    seen.add(email);
+    out.push({ email, password: passRaw });
+  }
+  return out;
+}
 
 /** Normaliza texto pegado desde Vercel u otros paneles (BOM, comillas tipográficas). */
 function normalizeEnvJson(raw: string): string {
@@ -51,7 +73,7 @@ function passwordFromItem(item: object): string | null {
   return null;
 }
 
-export function parseSuperadminAccountsFromEnv(): EnvSuperadminAccount[] {
+function parseSuperadminAccountsFromJsonEnv(): EnvSuperadminAccount[] {
   const raw = process.env.SUPERADMIN_ACCOUNTS;
   if (!raw?.trim()) return [];
 
@@ -59,7 +81,7 @@ export function parseSuperadminAccountsFromEnv(): EnvSuperadminAccount[] {
   if (!parsed) {
     if (process.env.NODE_ENV === "development") {
       console.warn(
-        "[SUPERADMIN_ACCOUNTS] JSON no válido. Usa un array [{\"email\":\"...\",\"password\":\"...\"}] en una línea.",
+        "[SUPERADMIN_ACCOUNTS] JSON no válido. Usa AUTH_USER_N_EMAIL / AUTH_USER_N_PASSWORD o un array JSON válido.",
       );
     }
     return [];
@@ -92,6 +114,23 @@ export function parseSuperadminAccountsFromEnv(): EnvSuperadminAccount[] {
   }
 
   return out;
+}
+
+/**
+ * Cuentas superadmin: primero AUTH_USER_1_*, AUTH_USER_2_*, … luego entradas
+ * de SUPERADMIN_ACCOUNTS que no repitan correo ya definido por numerados.
+ */
+export function parseSuperadminAccountsFromEnv(): EnvSuperadminAccount[] {
+  const numbered = parseSuperadminAccountsFromNumberedEnv();
+  const seen = new Set(numbered.map((a) => a.email));
+  const merged = [...numbered];
+  for (const a of parseSuperadminAccountsFromJsonEnv()) {
+    if (!seen.has(a.email)) {
+      seen.add(a.email);
+      merged.push(a);
+    }
+  }
+  return merged;
 }
 
 export function findEnvSuperadminMatch(
