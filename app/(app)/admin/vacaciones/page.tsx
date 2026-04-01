@@ -5,8 +5,13 @@ import {
 import { VACATION_DAYS_PER_YEAR } from "@/lib/vacation-days";
 import { AdminPendingVacations } from "@/components/vacations/admin-pending-vacations";
 import { AdminVacationsPanel } from "@/components/vacations/admin-vacations-panel";
+import { unstable_noStore as noStore } from "next/cache";
+
+/** Datos en tiempo real: lista de pendientes y no caché RSC obsoleto. */
+export const dynamic = "force-dynamic";
 
 export default async function AdminVacacionesPage() {
+  noStore();
   const [users, pendingRequests] = await Promise.all([
     getAdminVacationUsers(),
     getAdminPendingVacationRequests(),

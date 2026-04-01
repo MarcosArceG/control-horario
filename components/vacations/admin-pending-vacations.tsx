@@ -22,6 +22,22 @@ export function AdminPendingVacations({ initial }: Props) {
     setRows(initial);
   }, [initial]);
 
+  /** Evita lista vacía por caché del navegador o RSC: recarga pendientes al abrir el panel. */
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const next = await getAdminPendingVacationRequests();
+        if (!cancelled) setRows(next);
+      } catch {
+        /* sesión o red; se mantiene initial */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function onApprove(id: string) {
     startTransition(async () => {
       try {

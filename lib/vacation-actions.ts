@@ -322,27 +322,26 @@ export async function getAdminPendingVacationRequests(): Promise<
   await sessionSuperadminOrRedirect();
 
   const rows = await prisma.vacationEntry.findMany({
-    where: {
-      status: "PENDING",
-      user: { role: "USER" },
-    },
+    where: { status: "PENDING" },
     orderBy: { createdAt: "asc" },
     include: {
-      user: { select: { email: true, name: true } },
+      user: { select: { email: true, name: true, role: true } },
     },
   });
 
-  return rows.map((r) => ({
-    id: r.id,
-    userId: r.userId,
-    employeeEmail: r.user.email,
-    employeeName: r.user.name,
-    startDate: dateFieldToYMD(r.startDate),
-    endDate: dateFieldToYMD(r.endDate),
-    calendarDays: countCalendarDaysInclusive(r.startDate, r.endDate),
-    note: r.note,
-    createdAt: r.createdAt.toISOString(),
-  }));
+  return rows
+    .filter((r) => r.user.role === "USER")
+    .map((r) => ({
+      id: r.id,
+      userId: r.userId,
+      employeeEmail: r.user.email,
+      employeeName: r.user.name,
+      startDate: dateFieldToYMD(r.startDate),
+      endDate: dateFieldToYMD(r.endDate),
+      calendarDays: countCalendarDaysInclusive(r.startDate, r.endDate),
+      note: r.note,
+      createdAt: r.createdAt.toISOString(),
+    }));
 }
 
 export async function getAdminVacationEntries(userId: string, year: number) {
