@@ -4,6 +4,7 @@ import {
   sessionSuperadminOrRedirect,
   sessionSuperadminOrThrow,
   sessionUserOrRedirect,
+  sessionUserOrThrow,
 } from "@/lib/auth-safe";
 import { prisma } from "@/lib/prisma";
 import { writeAuditLog } from "@/lib/audit";
@@ -64,25 +65,27 @@ async function sumApprovedDaysInYear(
   return sum;
 }
 
-async function assertApprovedFitsLimit(
+async function sumPendingDaysInYear(
   userId: string,
-  start: Date,
-  end: Date,
+  year: number,
   excludeId?: string,
-) {
-  const limit = await getVacationLimitForUser(userId);
-  for (const y of affectedYears(start, end)) {
-    const current = await sumApprovedDaysInYear(userId, y, excludeId);
-    const add = calendarDaysInCalendarYear(y, start, end);
-    if (current + add > limit) {
-      throw new Error(
-        `Supera el máximo de ${limit} días naturales en ${y} (ya hay ${current} días registrados).`,
-      );
-    }
+): Promise<number> {
+  const entries = await prisma.vacationEntry.findMany({
+    where: {
+      userId,
+      status: "PENDING",
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+    },
+  });
+  let sum = 0;
+  for (const e of entries) {
+    sum += calendarDaysInCalendarYear(year, e.startDate, e.endDate);
   }
+  return sum;
 }
 
-async function assertNoApprovedOverlap(
+/** Sin solape con vacaciones aprobadas o solicitudes pendientes (mismo usuario). */
+async function assertNoApprovedOrPendingOverlap(
   userId: string,
   start: Date,
   end: Date,
@@ -91,15 +94,35 @@ async function assertNoApprovedOverlap(
   const entries = await prisma.vacationEntry.findMany({
     where: {
       userId,
-      status: "APPROVED",
+      status: { in: ["APPROVED", "PENDING"] },
       ...(excludeId ? { id: { not: excludeId } } : {}),
     },
   });
   const hit = entries.find((e) => rangesOverlap(start, end, e.startDate, e.endDate));
   if (hit) {
     throw new Error(
-      "Las fechas se solapan con otras vacaciones ya disfrutadas (aprobadas).",
+      "Las fechas se solapan con otras vacaciones ya registradas o pendientes de aprobación.",
     );
+  }
+}
+
+/** Solicitud nueva o aprobación: aprobados + pendientes (sin la fila excluida) + tramo no superan el tope por año natural. */
+async function assertApprovedPlusPendingFitsLimit(
+  userId: string,
+  start: Date,
+  end: Date,
+  excludeId?: string,
+) {
+  const limit = await getVacationLimitForUser(userId);
+  for (const y of affectedYears(start, end)) {
+    const approved = await sumApprovedDaysInYear(userId, y, excludeId);
+    const pending = await sumPendingDaysInYear(userId, y, excludeId);
+    const add = calendarDaysInCalendarYear(y, start, end);
+    if (approved + pending + add > limit) {
+      throw new Error(
+        `Supera el máximo de ${limit} días naturales en ${y} (${approved} aprobados y ${pending} pendientes ya reservan días).`,
+      );
+    }
   }
 }
 
@@ -165,13 +188,110 @@ export async function getMyVacationSummary(year: number) {
     end: dateFieldToYMD(e.endDate),
   }));
 
+  const entryRows = await prisma.vacationEntry.findMany({
+    where: {
+      userId: user.id,
+      status: { not: "REJECTED" },
+      startDate: { lte: yEnd },
+      endDate: { gte: yStart },
+    },
+    orderBy: { startDate: "desc" },
+  });
+
   return {
     year,
     entitlement,
     approvedDaysInYear,
     remaining: Math.max(0, entitlement - approvedDaysInYear),
     calendarSpans,
+    entries: entryRows.map(toDTO),
   };
+}
+
+const VACATION_NOTE_MAX = 500;
+
+export async function requestMyVacation(input: {
+  startDate: string;
+  endDate: string;
+  note?: string | null;
+}) {
+  const user = await sessionUserOrThrow();
+  if (user.role !== "USER") {
+    throw new Error("Solo los trabajadores pueden enviar solicitudes de vacaciones.");
+  }
+
+  const start = parseDateInput(input.startDate);
+  const end = parseDateInput(input.endDate);
+  if (start > end) throw new Error("La fecha de inicio debe ser anterior al fin.");
+
+  let note: string | null = null;
+  if (input.note != null && String(input.note).trim() !== "") {
+    const t = String(input.note).trim();
+    if (t.length > VACATION_NOTE_MAX) {
+      throw new Error(`El comentario no puede superar ${VACATION_NOTE_MAX} caracteres.`);
+    }
+    note = t;
+  }
+
+  await assertApprovedPlusPendingFitsLimit(user.id, start, end);
+  await assertNoApprovedOrPendingOverlap(user.id, start, end);
+
+  const created = await prisma.vacationEntry.create({
+    data: {
+      userId: user.id,
+      startDate: start,
+      endDate: end,
+      status: "PENDING",
+      note,
+      createdById: user.id,
+    },
+  });
+
+  await writeAuditLog({
+    actorId: user.id,
+    action: "VACATION_REQUEST_CREATE",
+    entityType: "VacationEntry",
+    entityId: created.id,
+    metadata: {
+      startDate: dateFieldToYMD(start),
+      endDate: dateFieldToYMD(end),
+    },
+  });
+
+  revalidatePath("/vacaciones");
+  revalidatePath("/admin/vacaciones");
+  return toDTO(created);
+}
+
+export async function cancelMyVacationRequest(id: string) {
+  const user = await sessionUserOrThrow();
+  if (user.role !== "USER") {
+    throw new Error("No autorizado.");
+  }
+
+  const row = await prisma.vacationEntry.findUnique({ where: { id } });
+  if (!row || row.userId !== user.id) {
+    throw new Error("Solicitud no encontrada.");
+  }
+  if (row.status !== "PENDING") {
+    throw new Error("Solo puedes cancelar solicitudes pendientes de aprobación.");
+  }
+
+  await prisma.vacationEntry.delete({ where: { id } });
+
+  await writeAuditLog({
+    actorId: user.id,
+    action: "VACATION_REQUEST_CANCEL",
+    entityType: "VacationEntry",
+    entityId: id,
+    metadata: {
+      startDate: dateFieldToYMD(row.startDate),
+      endDate: dateFieldToYMD(row.endDate),
+    },
+  });
+
+  revalidatePath("/vacaciones");
+  revalidatePath("/admin/vacaciones");
 }
 
 export async function getAdminVacationUsers() {
@@ -247,8 +367,8 @@ export async function adminCreateVacation(input: {
   });
   if (!target) throw new Error("Empleado no encontrado.");
 
-  await assertApprovedFitsLimit(target.id, start, end);
-  await assertNoApprovedOverlap(target.id, start, end);
+  await assertApprovedPlusPendingFitsLimit(target.id, start, end);
+  await assertNoApprovedOrPendingOverlap(target.id, start, end);
 
   const created = await prisma.vacationEntry.create({
     data: {
@@ -288,8 +408,18 @@ export async function adminApproveVacation(id: string) {
     throw new Error("Solo se puede aprobar una solicitud pendiente.");
   }
 
-  await assertApprovedFitsLimit(row.userId, row.startDate, row.endDate, row.id);
-  await assertNoApprovedOverlap(row.userId, row.startDate, row.endDate, row.id);
+  await assertApprovedPlusPendingFitsLimit(
+    row.userId,
+    row.startDate,
+    row.endDate,
+    row.id,
+  );
+  await assertNoApprovedOrPendingOverlap(
+    row.userId,
+    row.startDate,
+    row.endDate,
+    row.id,
+  );
 
   await prisma.vacationEntry.update({
     where: { id },

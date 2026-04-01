@@ -39,6 +39,19 @@ export function etiquetaRol(r: string): string {
   }
 }
 
+export function etiquetaEstadoVacacion(s: string): string {
+  switch (s) {
+    case "PENDING":
+      return "Pendiente de aprobación";
+    case "APPROVED":
+      return "Aprobada";
+    case "REJECTED":
+      return "Rechazada";
+    default:
+      return s;
+  }
+}
+
 /** Acciones guardadas en auditoría (códigos internos → texto en español). */
 export function etiquetaAccionAuditoria(action: string): string {
   switch (action) {
@@ -62,6 +75,16 @@ export function etiquetaAccionAuditoria(action: string): string {
       return "Exportación de horas trabajadas";
     case "VACATION_ENTITLEMENT_SET":
       return "Tope de vacaciones actualizado";
+    case "VACATION_REQUEST_CREATE":
+      return "Solicitud de vacaciones enviada";
+    case "VACATION_REQUEST_CANCEL":
+      return "Solicitud de vacaciones cancelada";
+    case "VACATION_ADMIN_CREATE":
+      return "Vacaciones registradas por administración";
+    case "VACATION_APPROVE":
+      return "Vacaciones aprobadas";
+    case "VACATION_DELETE":
+      return "Registro de vacaciones eliminado";
     default:
       return action;
   }
@@ -77,6 +100,8 @@ export function etiquetaTipoEntidadAuditoria(tipo: string): string {
       return "Corrección horaria";
     case "Export":
       return "Exportación";
+    case "VacationEntry":
+      return "Vacaciones";
     default:
       return tipo;
   }
