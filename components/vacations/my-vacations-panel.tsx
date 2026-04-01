@@ -3,12 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { VacationCalendar } from "@/components/vacations/vacation-calendar";
+import { VacationRangePicker } from "@/components/vacations/vacation-range-picker";
 import {
   cancelMyVacationRequest,
   getMyVacationSummary,
   requestMyVacation,
 } from "@/lib/vacation-actions";
-import { DatePickerField } from "@/components/date-picker-field";
 import { formatFecha } from "@/lib/locale";
 import { etiquetaEstadoVacacion } from "@/lib/labels-es";
 
@@ -167,21 +167,18 @@ export function MyVacationsPanel({
           Solicitar vacaciones
         </h2>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
-          Indica las fechas (días naturales). Tu responsable las revisará en administración.
+          Indica las fechas (días naturales).
         </p>
         <form onSubmit={onSubmitRequest} className="mt-4 space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <DatePickerField
-              label="Desde"
-              required
-              value={form.start}
-              onChange={(v) => setForm((f) => ({ ...f, start: v }))}
-            />
-            <DatePickerField
-              label="Hasta"
-              required
-              value={form.end}
-              onChange={(v) => setForm((f) => ({ ...f, end: v }))}
+          <div className="max-w-[320px]">
+            <VacationRangePicker
+              startDate={form.start}
+              endDate={form.end}
+              onChange={(start, end) =>
+                setForm((f) => ({ ...f, start, end }))
+              }
+              initialYear={year}
+              initialMonth={month}
             />
           </div>
           <label className="block text-sm">

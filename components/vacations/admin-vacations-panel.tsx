@@ -12,8 +12,8 @@ import {
 } from "@/lib/vacation-actions";
 import { etiquetaEstadoVacacion } from "@/lib/labels-es";
 import { VACATION_DAYS_PER_YEAR } from "@/lib/vacation-days";
-import { DatePickerField } from "@/components/date-picker-field";
 import { VacationCalendar } from "@/components/vacations/vacation-calendar";
+import { VacationRangePicker } from "@/components/vacations/vacation-range-picker";
 import { formatFecha } from "@/lib/locale";
 
 type UserOpt = {
@@ -267,18 +267,15 @@ export function AdminVacationsPanel({
               solicitud).
             </p>
             <form onSubmit={onCreate} className="mt-4 space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <DatePickerField
-                  label="Desde"
-                  required
-                  value={form.start}
-                  onChange={(v) => setForm((f) => ({ ...f, start: v }))}
-                />
-                <DatePickerField
-                  label="Hasta"
-                  required
-                  value={form.end}
-                  onChange={(v) => setForm((f) => ({ ...f, end: v }))}
+              <div className="max-w-[320px]">
+                <VacationRangePicker
+                  startDate={form.start}
+                  endDate={form.end}
+                  onChange={(start, end) =>
+                    setForm((f) => ({ ...f, start, end }))
+                  }
+                  initialYear={year}
+                  initialMonth={month}
                 />
               </div>
               <button
