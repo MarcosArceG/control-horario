@@ -129,51 +129,63 @@ export function AdminVacationsPanel({
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-end gap-4">
-        <label className="block min-w-[200px] text-sm">
-          <span className="text-slate-600 dark:text-slate-400">Empleado</span>
-          <select
-            value={userId}
-            onChange={(e) => onUserChange(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
-          >
-            <option value="">— Seleccionar —</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name ? `${u.name} (${u.email})` : u.email}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm">
-          <span className="text-slate-600 dark:text-slate-400">Año</span>
-          <select
-            value={year}
-            onChange={(e) => onYearChange(Number(e.target.value))}
-            className="mt-1 block rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
-          >
-            {[year - 1, year, year + 1].map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block text-sm">
-          <span className="text-slate-600 dark:text-slate-400">Mes en calendario</span>
-          <select
-            value={month}
-            onChange={(e) => setMonth(Number(e.target.value))}
-            className="mt-1 block rounded-lg border border-slate-200 bg-white px-3 py-2 dark:border-slate-600 dark:bg-slate-900"
-          >
-            {Array.from({ length: 12 }, (_, i) => (
-              <option key={i} value={i}>
-                {new Date(2000, i, 1).toLocaleDateString("es-ES", { month: "long" })}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <section className="grid gap-6 md:grid-cols-[minmax(0,14rem)_1fr] md:items-start">
+        <div className="flex flex-col gap-4">
+          <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            Calendario
+          </p>
+          <label className="block text-sm">
+            <span className="text-slate-600 dark:text-slate-400">Empleado</span>
+            <select
+              value={userId}
+              onChange={(e) => onUserChange(e.target.value)}
+              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            >
+              <option value="">— Seleccionar —</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name ? `${u.name} (${u.email})` : u.email}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm">
+            <span className="text-slate-600 dark:text-slate-400">Año</span>
+            <select
+              value={year}
+              onChange={(e) => onYearChange(Number(e.target.value))}
+              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            >
+              {[year - 1, year, year + 1].map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm">
+            <span className="text-slate-600 dark:text-slate-400">Mes</span>
+            <select
+              value={month}
+              onChange={(e) => setMonth(Number(e.target.value))}
+              className="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-base text-slate-900 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            >
+              {Array.from({ length: 12 }, (_, i) => (
+                <option key={i} value={i}>
+                  {new Date(2000, i, 1).toLocaleDateString("es-ES", {
+                    month: "long",
+                  })}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="flex justify-start md:justify-end">
+          <div className="w-full max-w-[320px] md:max-w-[min(100%,360px)]">
+            <VacationCalendar year={year} month={month} spans={spans} />
+          </div>
+        </div>
+      </section>
 
       {error ? (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-950/50 dark:text-red-200">
@@ -182,8 +194,17 @@ export function AdminVacationsPanel({
       ) : null}
 
       {!userId ? (
-        <p className="text-sm text-slate-500">Selecciona un empleado para ver y editar sus vacaciones.</p>
-      ) : data ? (
+        <p className="text-sm text-slate-500">
+          Selecciona un empleado para ver el resumen, registrar vacaciones y el
+          listado de registros.
+        </p>
+      ) : null}
+
+      {userId && !data && pending ? (
+        <p className="text-sm text-slate-500">Cargando datos del empleado…</p>
+      ) : null}
+
+      {userId && data ? (
         <>
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl bg-teal-50 p-4 ring-1 ring-teal-100 dark:bg-teal-950/40 dark:ring-teal-900/50">
@@ -237,37 +258,38 @@ export function AdminVacationsPanel({
             </div>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-            <section>
-              <form
-                onSubmit={onCreate}
-                className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-900"
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+              Registrar vacaciones manualmente
+            </h2>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+              Las fechas se guardan como aprobadas directamente (sin pasar por
+              solicitud).
+            </p>
+            <form onSubmit={onCreate} className="mt-4 space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <DatePickerField
+                  label="Desde"
+                  required
+                  value={form.start}
+                  onChange={(v) => setForm((f) => ({ ...f, start: v }))}
+                />
+                <DatePickerField
+                  label="Hasta"
+                  required
+                  value={form.end}
+                  onChange={(v) => setForm((f) => ({ ...f, end: v }))}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={pending}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <DatePickerField
-                    label="Desde"
-                    required
-                    value={form.start}
-                    onChange={(v) => setForm((f) => ({ ...f, start: v }))}
-                  />
-                  <DatePickerField
-                    label="Hasta"
-                    required
-                    value={form.end}
-                    onChange={(v) => setForm((f) => ({ ...f, end: v }))}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={pending}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  Guardar vacaciones
-                </button>
-              </form>
-            </section>
-            <VacationCalendar year={year} month={month} spans={spans} />
-          </div>
+                Guardar vacaciones
+              </button>
+            </form>
+          </section>
 
           <section>
             <h2 className="mb-3 text-lg font-bold text-slate-900 dark:text-slate-50">
