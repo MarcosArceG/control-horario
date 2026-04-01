@@ -1,5 +1,7 @@
 /** Etiquetas en español para valores mostrados en la interfaz */
 
+import { calendarTodayUtcYmd } from "@/lib/vacation-days";
+
 export function etiquetaTipoEvento(t: string): string {
   switch (t) {
     case "CLOCK_IN":
@@ -39,17 +41,26 @@ export function etiquetaRol(r: string): string {
   }
 }
 
-export function etiquetaEstadoVacacion(s: string): string {
-  switch (s) {
-    case "PENDING":
-      return "Pendiente de aprobación";
-    case "APPROVED":
-      return "Aprobada";
-    case "REJECTED":
-      return "Rechazada";
-    default:
-      return s;
+/**
+ * Estados de vacaciones en pantalla:
+ * - Solicitada: pendiente de revisión por administración
+ * - Aprobada: aceptada y el período aún no ha terminado (hasta la fecha de fin inclusive)
+ * - Disfrutada: aceptada y ya pasó la fecha de fin del período
+ * - Rechazada: rechazada por administración
+ */
+export function etiquetaEstadoVacacion(
+  status: string,
+  endDateYmd?: string,
+): string {
+  if (status === "REJECTED") return "Rechazada";
+  if (status === "PENDING") return "Solicitada";
+  if (status === "APPROVED") {
+    if (endDateYmd && endDateYmd < calendarTodayUtcYmd()) {
+      return "Disfrutada";
+    }
+    return "Aprobada";
   }
+  return status;
 }
 
 /** Acciones guardadas en auditoría (códigos internos → texto en español). */
@@ -85,6 +96,8 @@ export function etiquetaAccionAuditoria(action: string): string {
       return "Vacaciones aprobadas";
     case "VACATION_DELETE":
       return "Registro de vacaciones eliminado";
+    case "VACATION_REJECT":
+      return "Solicitud de vacaciones rechazada";
     default:
       return action;
   }

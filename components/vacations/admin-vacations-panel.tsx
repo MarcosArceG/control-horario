@@ -2,14 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import type { VacationStatus } from "@prisma/client";
 import {
   adminApproveVacation,
   adminCreateVacation,
   adminDeleteVacation,
+  adminRejectVacation,
   adminSetUserVacationDays,
   getAdminVacationEntries,
 } from "@/lib/vacation-actions";
+import { etiquetaEstadoVacacion } from "@/lib/labels-es";
 import { VACATION_DAYS_PER_YEAR } from "@/lib/vacation-days";
 import { DatePickerField } from "@/components/date-picker-field";
 import { VacationCalendar } from "@/components/vacations/vacation-calendar";
@@ -23,12 +24,6 @@ type UserOpt = {
 };
 
 type Initial = Awaited<ReturnType<typeof getAdminVacationEntries>>;
-
-function statusLabel(s: VacationStatus) {
-  if (s === "APPROVED") return "Disfrutada";
-  if (s === "PENDING") return "Pendiente";
-  return s;
-}
 
 export function AdminVacationsPanel({
   users,
@@ -124,10 +119,12 @@ export function AdminVacationsPanel({
 
   const spans = useMemo(() => {
     if (!data?.entries) return [];
-    return data.entries.map((e) => ({
-      start: e.startDate,
-      end: e.endDate,
-    }));
+    return data.entries
+      .filter((e) => e.status === "APPROVED" || e.status === "PENDING")
+      .map((e) => ({
+        start: e.startDate,
+        end: e.endDate,
+      }));
   }, [data?.entries]);
 
   return (
@@ -298,7 +295,9 @@ export function AdminVacationsPanel({
                         {formatFecha(new Date(r.endDate + "T12:00:00Z"))}
                       </td>
                       <td className="px-3 py-2">{r.calendarDays}</td>
-                      <td className="px-3 py-2">{statusLabel(r.status)}</td>
+                      <td className="px-3 py-2">
+                        {etiquetaEstadoVacacion(r.status, r.endDate)}
+                      </td>
                       <td className="max-w-[10rem] truncate px-3 py-2 text-slate-600 dark:text-slate-400">
                         {r.note ?? "—"}
                       </td>
@@ -328,26 +327,52 @@ export function AdminVacationsPanel({
                               Aprobar
                             </button>
                           ) : null}
-                          <button
-                            type="button"
-                            disabled={pending}
-                            onClick={() => {
-                              startTransition(async () => {
-                                try {
-                                  setError(null);
-                                  await adminDeleteVacation(r.id);
-                                  load(userId, year);
-                                } catch (err) {
-                                  setError(
-                                    err instanceof Error ? err.message : "Error",
-                                  );
-                                }
-                              });
-                            }}
-                            className="text-xs font-medium text-red-600 hover:underline dark:text-red-400"
-                          >
-                            Eliminar
-                          </button>
+                          {r.status === "PENDING" ? (
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() => {
+                                startTransition(async () => {
+                                  try {
+                                    setError(null);
+                                    await adminRejectVacation(r.id);
+                                    load(userId, year);
+                                  } catch (err) {
+                                    setError(
+                                      err instanceof Error
+                                        ? err.message
+                                        : "Error",
+                                    );
+                                  }
+                                });
+                              }}
+                              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+                            >
+                              Rechazar
+                            </button>
+                          ) : null}
+                          {r.status === "APPROVED" || r.status === "REJECTED" ? (
+                            <button
+                              type="button"
+                              disabled={pending}
+                              onClick={() => {
+                                startTransition(async () => {
+                                  try {
+                                    setError(null);
+                                    await adminDeleteVacation(r.id);
+                                    load(userId, year);
+                                  } catch (err) {
+                                    setError(
+                                      err instanceof Error ? err.message : "Error",
+                                    );
+                                  }
+                                });
+                              }}
+                              className="text-xs font-medium text-red-600 hover:underline dark:text-red-400"
+                            >
+                              Eliminar
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>

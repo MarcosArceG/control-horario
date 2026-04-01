@@ -53,3 +53,11 @@ export function rangesOverlap(
 ): boolean {
   return aStart <= bEnd && bStart <= aEnd;
 }
+
+/** Hoy como YYYY-MM-DD en calendario UTC (coherente con fechas DATE de vacaciones). */
+export function calendarTodayUtcYmd(now: Date = new Date()): string {
+  const y = now.getUTCFullYear();
+  const m = now.getUTCMonth() + 1;
+  const d = now.getUTCDate();
+  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}

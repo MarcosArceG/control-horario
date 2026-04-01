@@ -191,7 +191,6 @@ export async function getMyVacationSummary(year: number) {
   const entryRows = await prisma.vacationEntry.findMany({
     where: {
       userId: user.id,
-      status: { not: "REJECTED" },
       startDate: { lte: yEnd },
       endDate: { gte: yStart },
     },
@@ -368,7 +367,6 @@ export async function getAdminVacationEntries(userId: string, year: number) {
   const entries = await prisma.vacationEntry.findMany({
     where: {
       userId,
-      status: { not: "REJECTED" },
       startDate: { lte: new Date(Date.UTC(year, 11, 31)) },
       endDate: { gte: new Date(Date.UTC(year, 0, 1)) },
     },
@@ -471,6 +469,32 @@ export async function adminApproveVacation(id: string) {
   await writeAuditLog({
     actorId: actor.id,
     action: "VACATION_APPROVE",
+    entityType: "VacationEntry",
+    entityId: id,
+    metadata: { subjectUserId: row.userId },
+  });
+
+  revalidatePath("/admin/vacaciones");
+  revalidatePath("/vacaciones");
+}
+
+export async function adminRejectVacation(id: string) {
+  const actor = await sessionSuperadminOrThrow();
+
+  const row = await prisma.vacationEntry.findUnique({ where: { id } });
+  if (!row) throw new Error("Registro no encontrado.");
+  if (row.status !== "PENDING") {
+    throw new Error("Solo se puede rechazar una solicitud pendiente.");
+  }
+
+  await prisma.vacationEntry.update({
+    where: { id },
+    data: { status: "REJECTED" },
+  });
+
+  await writeAuditLog({
+    actorId: actor.id,
+    action: "VACATION_REJECT",
     entityType: "VacationEntry",
     entityId: id,
     metadata: { subjectUserId: row.userId },

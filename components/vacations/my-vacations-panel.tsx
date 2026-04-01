@@ -233,7 +233,9 @@ export function MyVacationsPanel({
                     {formatFecha(new Date(r.endDate + "T12:00:00Z"))}
                   </td>
                   <td className="px-3 py-2">{r.calendarDays}</td>
-                  <td className="px-3 py-2">{etiquetaEstadoVacacion(r.status)}</td>
+                  <td className="px-3 py-2">
+                    {etiquetaEstadoVacacion(r.status, r.endDate)}
+                  </td>
                   <td className="max-w-[12rem] truncate px-3 py-2 text-slate-600 dark:text-slate-400">
                     {r.note ?? "—"}
                   </td>

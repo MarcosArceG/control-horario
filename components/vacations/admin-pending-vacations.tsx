@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import {
   adminApproveVacation,
-  adminDeleteVacation,
+  adminRejectVacation,
   getAdminPendingVacationRequests,
   type AdminPendingVacationRow,
 } from "@/lib/vacation-actions";
@@ -38,18 +38,18 @@ export function AdminPendingVacations({ initial }: Props) {
 
   function onReject(id: string) {
     const ok = window.confirm(
-      "¿Rechazar y eliminar esta solicitud? El empleado podrá enviar otras fechas.",
+      "¿Rechazar esta solicitud? Quedará registrada como rechazada y el empleado lo verá en su historial.",
     );
     if (!ok) return;
     startTransition(async () => {
       try {
         setError(null);
-        await adminDeleteVacation(id);
+        await adminRejectVacation(id);
         const next = await getAdminPendingVacationRequests();
         setRows(next);
         router.refresh();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "No se pudo eliminar.");
+        setError(e instanceof Error ? e.message : "No se pudo rechazar.");
       }
     });
   }
