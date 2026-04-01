@@ -284,7 +284,8 @@ export function AdminVacationsPanel({
                     <th className="px-3 py-2 font-medium">Fin</th>
                     <th className="px-3 py-2 font-medium">Días naturales</th>
                     <th className="px-3 py-2 font-medium">Estado</th>
-                    <th className="px-3 py-2 font-medium" />
+                    <th className="px-3 py-2 font-medium">Notas</th>
+                    <th className="px-3 py-2 font-medium text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -298,8 +299,11 @@ export function AdminVacationsPanel({
                       </td>
                       <td className="px-3 py-2">{r.calendarDays}</td>
                       <td className="px-3 py-2">{statusLabel(r.status)}</td>
-                      <td className="px-3 py-2">
-                        <div className="flex flex-wrap gap-2">
+                      <td className="max-w-[10rem] truncate px-3 py-2 text-slate-600 dark:text-slate-400">
+                        {r.note ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <div className="flex flex-wrap justify-end gap-2">
                           {r.status === "PENDING" ? (
                             <button
                               type="button"
@@ -319,7 +323,7 @@ export function AdminVacationsPanel({
                                   }
                                 });
                               }}
-                              className="text-xs font-medium text-emerald-700 hover:underline dark:text-emerald-400"
+                              className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 disabled:opacity-50 dark:bg-emerald-600 dark:hover:bg-emerald-500"
                             >
                               Aprobar
                             </button>

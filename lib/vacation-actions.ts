@@ -304,6 +304,48 @@ export async function getAdminVacationUsers() {
   });
 }
 
+/** Todas las solicitudes de vacaciones en estado pendiente (vista global para el administrador). */
+export type AdminPendingVacationRow = {
+  id: string;
+  userId: string;
+  employeeEmail: string;
+  employeeName: string | null;
+  startDate: string;
+  endDate: string;
+  calendarDays: number;
+  note: string | null;
+  createdAt: string;
+};
+
+export async function getAdminPendingVacationRequests(): Promise<
+  AdminPendingVacationRow[]
+> {
+  await sessionSuperadminOrRedirect();
+
+  const rows = await prisma.vacationEntry.findMany({
+    where: {
+      status: "PENDING",
+      user: { role: "USER" },
+    },
+    orderBy: { createdAt: "asc" },
+    include: {
+      user: { select: { email: true, name: true } },
+    },
+  });
+
+  return rows.map((r) => ({
+    id: r.id,
+    userId: r.userId,
+    employeeEmail: r.user.email,
+    employeeName: r.user.name,
+    startDate: dateFieldToYMD(r.startDate),
+    endDate: dateFieldToYMD(r.endDate),
+    calendarDays: countCalendarDaysInclusive(r.startDate, r.endDate),
+    note: r.note,
+    createdAt: r.createdAt.toISOString(),
+  }));
+}
+
 export async function getAdminVacationEntries(userId: string, year: number) {
   await sessionSuperadminOrRedirect();
 

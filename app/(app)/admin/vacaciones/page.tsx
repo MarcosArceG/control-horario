@@ -1,9 +1,16 @@
-import { getAdminVacationUsers } from "@/lib/vacation-actions";
+import {
+  getAdminPendingVacationRequests,
+  getAdminVacationUsers,
+} from "@/lib/vacation-actions";
 import { VACATION_DAYS_PER_YEAR } from "@/lib/vacation-days";
+import { AdminPendingVacations } from "@/components/vacations/admin-pending-vacations";
 import { AdminVacationsPanel } from "@/components/vacations/admin-vacations-panel";
 
 export default async function AdminVacacionesPage() {
-  const users = await getAdminVacationUsers();
+  const [users, pendingRequests] = await Promise.all([
+    getAdminVacationUsers(),
+    getAdminPendingVacationRequests(),
+  ]);
   const year = new Date().getFullYear();
 
   return (
@@ -13,11 +20,13 @@ export default async function AdminVacacionesPage() {
           Vacaciones
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Registra las vacaciones por empleado. El tope por defecto es{" "}
-          {VACATION_DAYS_PER_YEAR} días naturales al año natural; puedes cambiarlo
-          por persona (p. ej. incorporación a mitad de año).
+          Aprueba las solicitudes que envían los empleados desde su pestaña de vacaciones,
+          o registra períodos directamente por persona. El tope por defecto es{" "}
+          {VACATION_DAYS_PER_YEAR} días naturales al año natural; puedes cambiarlo por
+          persona (p. ej. incorporación a mitad de año).
         </p>
       </div>
+      <AdminPendingVacations initial={pendingRequests} />
       <AdminVacationsPanel
         users={users}
         initialUserId={null}
