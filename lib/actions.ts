@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import {
+  redirectToLoginClearingSession,
   sessionSuperadminOrRedirect,
   sessionSuperadminOrThrow,
   sessionUserOrRedirect,
@@ -132,9 +133,12 @@ export async function getDashboardData() {
     where: { id: user.id },
     select: { name: true, email: true },
   });
+  if (!dbUser) {
+    redirectToLoginClearingSession();
+  }
   const displayName = firstDisplayName(
-    dbUser?.name,
-    dbUser?.email ?? user.email ?? "",
+    dbUser.name,
+    dbUser.email ?? user.email ?? "",
   );
 
   const metrics = await computeDashboardMetrics(user.id);

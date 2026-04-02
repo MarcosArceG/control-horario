@@ -5,6 +5,13 @@ import { redirect, unstable_rethrow } from "next/navigation";
 /** Usuario de sesión con id garantizado (p. ej. callbacks JWT). */
 export type SessionUser = NonNullable<Session["user"]> & { id: string };
 
+/** Id de usuario en JWT (cuid Prisma); evita `where: { id: undefined }` que rompe Prisma. */
+export function isValidSessionUserId(id: unknown): id is string {
+  if (typeof id !== "string") return false;
+  const s = id.trim();
+  return s.length >= 16 && s.length <= 128 && /^[a-z0-9]+$/i.test(s);
+}
+
 /**
  * Evita que un fallo real de Auth en el layout tumbe toda la app (p. ej. AUTH_SECRET mal copiado en Vercel).
  * No atrapa errores internos de Next (p. ej. render dinámico con `headers()` durante el prerender).
@@ -26,10 +33,11 @@ export async function authSafe(): Promise<Session | null> {
  */
 export async function sessionUserOrThrow(): Promise<SessionUser> {
   const session = await authSafe();
-  if (!session?.user?.id) {
+  const id = session?.user?.id;
+  if (!isValidSessionUserId(id)) {
     throw new Error("No autorizado.");
   }
-  return session.user as SessionUser;
+  return { ...session!.user, id } as SessionUser;
 }
 
 export async function sessionSuperadminOrThrow(): Promise<SessionUser> {
@@ -54,19 +62,21 @@ export function redirectToLoginClearingSession(): never {
  */
 export async function sessionUserOrRedirect(): Promise<SessionUser> {
   const session = await authSafe();
-  if (!session?.user?.id) {
+  const id = session?.user?.id;
+  if (!isValidSessionUserId(id)) {
     redirectToLoginClearingSession();
   }
-  return session!.user as SessionUser;
+  return { ...session!.user, id } as SessionUser;
 }
 
 /** Sin sesión → login; usuario normal en ruta admin → /dashboard */
 export async function sessionSuperadminOrRedirect(): Promise<SessionUser> {
   const session = await authSafe();
-  if (!session?.user?.id) {
+  const id = session?.user?.id;
+  if (!isValidSessionUserId(id)) {
     redirectToLoginClearingSession();
   }
-  const user = session!.user as SessionUser;
+  const user = { ...session!.user, id } as SessionUser;
   if (user.role !== "SUPERADMIN") {
     redirect("/dashboard");
   }

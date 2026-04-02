@@ -31,8 +31,15 @@ export const authConfig = {
     },
     session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as Role;
+        const id = token.id;
+        const role = token.role;
+        if (typeof id !== "string" || !id.trim()) {
+          session.user.id = "";
+          session.user.role = "USER";
+        } else {
+          session.user.id = id;
+          session.user.role = (role as Role) ?? "USER";
+        }
       }
       return session;
     },
