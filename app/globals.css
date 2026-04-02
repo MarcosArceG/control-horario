@@ -1,6 +1,6 @@
-@import "tailwindcss" source("..");
+@import "tailwindcss";
 
-/* Raíz de escaneo = carpeta del proyecto (no el cwd). @source refuerza app/components/lib. */
+/* @source: rutas relativas a este archivo (app/globals.css). PostCSS usa `base` en postcss.config.mjs. */
 @source "../app/**/*.{js,ts,jsx,tsx,mdx}";
 @source "../components/**/*.{js,ts,jsx,tsx,mdx}";
 @source "../lib/**/*.{js,ts,jsx,tsx,mdx}";
