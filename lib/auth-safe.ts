@@ -1,16 +1,12 @@
 import { auth } from "@/lib/auth";
 import type { Session } from "next-auth";
 import { redirect, unstable_rethrow } from "next/navigation";
+import { isValidSessionUserId } from "@/lib/session-id";
+
+export { hasValidAppSession, isValidSessionUserId } from "@/lib/session-id";
 
 /** Usuario de sesión con id garantizado (p. ej. callbacks JWT). */
 export type SessionUser = NonNullable<Session["user"]> & { id: string };
-
-/** Id de usuario en JWT (cuid Prisma); evita `where: { id: undefined }` que rompe Prisma. */
-export function isValidSessionUserId(id: unknown): id is string {
-  if (typeof id !== "string") return false;
-  const s = id.trim();
-  return s.length >= 16 && s.length <= 128 && /^[a-z0-9]+$/i.test(s);
-}
 
 /**
  * Evita que un fallo real de Auth en el layout tumbe toda la app (p. ej. AUTH_SECRET mal copiado en Vercel).

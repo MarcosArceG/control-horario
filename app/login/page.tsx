@@ -1,5 +1,6 @@
 import { LoginForm } from "@/components/login-form";
 import { authSafe } from "@/lib/auth-safe";
+import { hasValidAppSession } from "@/lib/session-id";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
   const session = await authSafe();
-  if (session?.user) {
+  if (hasValidAppSession(session)) {
     redirect("/dashboard");
   }
 

@@ -3,6 +3,7 @@ import { CreateUserForm } from "@/components/create-user-form";
 import { DeleteUserButton } from "@/components/delete-user-button";
 import { getAdminUsers } from "@/lib/actions";
 import { authSafe, redirectToLoginClearingSession } from "@/lib/auth-safe";
+import { hasValidAppSession } from "@/lib/session-id";
 import { formatFecha } from "@/lib/locale";
 import { etiquetaRol } from "@/lib/labels-es";
 import {
@@ -12,7 +13,7 @@ import {
 
 export default async function AdminUsersPage() {
   const session = await authSafe();
-  if (!session?.user) redirectToLoginClearingSession();
+  if (!hasValidAppSession(session)) redirectToLoginClearingSession();
   const users = await getAdminUsers();
   const superAdminCount = users.filter((u) => u.role === "SUPERADMIN").length;
   const envSuperAdmins = envSuperadminCount();

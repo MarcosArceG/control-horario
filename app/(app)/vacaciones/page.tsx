@@ -1,11 +1,12 @@
 import { authSafe, redirectToLoginClearingSession } from "@/lib/auth-safe";
+import { hasValidAppSession } from "@/lib/session-id";
 import { redirect } from "next/navigation";
 import { getMyVacationSummary } from "@/lib/vacation-actions";
 import { MyVacationsPanel } from "@/components/vacations/my-vacations-panel";
 
 export default async function VacacionesPage() {
   const session = await authSafe();
-  if (!session?.user) redirectToLoginClearingSession();
+  if (!hasValidAppSession(session)) redirectToLoginClearingSession();
   if (session!.user.role === "SUPERADMIN") redirect("/admin/vacaciones");
 
   const year = new Date().getFullYear();

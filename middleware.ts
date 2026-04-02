@@ -1,9 +1,10 @@
 import { auth } from "@/lib/auth";
+import { isValidSessionUserId } from "@/lib/session-id";
 import { NextResponse } from "next/server";
 
 const authMiddleware = auth((req) => {
   const { pathname } = req.nextUrl;
-  const loggedIn = !!req.auth;
+  const loggedIn = isValidSessionUserId(req.auth?.user?.id);
 
   if (pathname.startsWith("/login")) {
     // No forzar /login → /dashboard aquí (evita bucles con RSC). Quien ya
