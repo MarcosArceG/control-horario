@@ -19,7 +19,7 @@ import {
   workedMsByUserDay,
   workedMsInRange,
 } from "@/lib/time";
-import { APP_TIMEZONE } from "@/lib/locale";
+import { APP_TIMEZONE, formatDuracionHM } from "@/lib/locale";
 import { addDays, startOfDay } from "date-fns";
 import { formatInTimeZone, fromZonedTime, toZonedTime, toDate } from "date-fns-tz";
 import bcrypt from "bcryptjs";
@@ -557,10 +557,10 @@ export async function exportWorkedHoursCsv(input: {
     const byDay = workedMsByUserDay(effective, from, toExclusive);
 
     for (const [day, ms] of byDay) {
-      const hours = (ms / 3_600_000).toFixed(2);
+      const duracion = formatDuracionHM(ms);
       const name = u.name ?? "";
       lines.push(
-        `${escapeCsv(u.email)},${escapeCsv(name)},${day},${hours}`,
+        `${escapeCsv(u.email)},${escapeCsv(name)},${day},${duracion}`,
       );
     }
   }
