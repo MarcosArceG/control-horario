@@ -1,3 +1,6 @@
+import { formatInTimeZone } from "date-fns-tz";
+import { APP_TIMEZONE } from "@/lib/locale";
+
 /** Días naturales de vacaciones al año (calendario). */
 export const VACATION_DAYS_PER_YEAR = 30;
 
@@ -54,10 +57,7 @@ export function rangesOverlap(
   return aStart <= bEnd && bStart <= aEnd;
 }
 
-/** Hoy como YYYY-MM-DD en calendario UTC (coherente con fechas DATE de vacaciones). */
-export function calendarTodayUtcYmd(now: Date = new Date()): string {
-  const y = now.getUTCFullYear();
-  const m = now.getUTCMonth() + 1;
-  const d = now.getUTCDate();
-  return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+/** Hoy como YYYY-MM-DD en calendario de España (Europe/Madrid). */
+export function calendarTodayYmd(now: Date = new Date()): string {
+  return formatInTimeZone(now, APP_TIMEZONE, "yyyy-MM-dd");
 }

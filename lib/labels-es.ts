@@ -1,6 +1,6 @@
 /** Etiquetas en español para valores mostrados en la interfaz */
 
-import { calendarTodayUtcYmd } from "@/lib/vacation-days";
+import { calendarTodayYmd } from "@/lib/vacation-days";
 
 export function etiquetaTipoEvento(t: string): string {
   switch (t) {
@@ -55,7 +55,7 @@ export function etiquetaEstadoVacacion(
   if (status === "REJECTED") return "Rechazada";
   if (status === "PENDING") return "Solicitada";
   if (status === "APPROVED") {
-    if (endDateYmd && endDateYmd < calendarTodayUtcYmd()) {
+    if (endDateYmd && endDateYmd < calendarTodayYmd()) {
       return "Disfrutada";
     }
     return "Aprobada";

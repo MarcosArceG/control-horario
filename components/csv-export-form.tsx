@@ -1,17 +1,22 @@
 "use client";
 
 import { exportWorkedHoursCsv } from "@/lib/actions";
+import { APP_TIMEZONE } from "@/lib/locale";
+import { formatInTimeZone } from "date-fns-tz";
 import { useState, useTransition } from "react";
 
 type UserOption = { id: string; email: string; name: string | null };
 
 export function CsvExportForm({ users }: { users: UserOption[] }) {
   const [from, setFrom] = useState(() => {
-    const d = new Date();
-    d.setDate(1);
-    return d.toISOString().slice(0, 10);
+    const now = new Date();
+    const y = formatInTimeZone(now, APP_TIMEZONE, "yyyy");
+    const m = formatInTimeZone(now, APP_TIMEZONE, "MM");
+    return `${y}-${m}-01`;
   });
-  const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
+  const [to, setTo] = useState(() =>
+    formatInTimeZone(new Date(), APP_TIMEZONE, "yyyy-MM-dd"),
+  );
   const [userId, setUserId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -32,8 +37,8 @@ export function CsvExportForm({ users }: { users: UserOption[] }) {
     startTransition(async () => {
       try {
         const csv = await exportWorkedHoursCsv({
-          from: `${from}T00:00:00.000Z`,
-          to: `${to}T23:59:59.999Z`,
+          from,
+          to,
           userId: userId || null,
         });
         const picked = users.find((u) => u.id === userId);
@@ -71,7 +76,7 @@ export function CsvExportForm({ users }: { users: UserOption[] }) {
       <div className="flex flex-wrap gap-4">
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-300">
-            Desde (fecha UTC)
+            Desde (fecha, calendario España)
           </span>
           <input
             type="date"
@@ -83,7 +88,7 @@ export function CsvExportForm({ users }: { users: UserOption[] }) {
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="font-medium text-slate-700 dark:text-slate-300">
-            Hasta (fecha UTC)
+            Hasta (fecha, calendario España)
           </span>
           <input
             type="date"

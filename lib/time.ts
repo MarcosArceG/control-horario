@@ -1,4 +1,7 @@
 import type { TimeEvent, TimeCorrection, TimeEventType } from "@prisma/client";
+import { addDays, startOfDay, startOfWeek } from "date-fns";
+import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
+import { APP_TIMEZONE } from "@/lib/locale";
 
 export type EffectiveEvent = {
   id: string;
@@ -212,50 +215,49 @@ export function workedMsInRange(
   return Math.max(0, total);
 }
 
-/** Días naturales UTC en el rango con milisegundos trabajados positivos. */
+/** Días naturales en España (Europe/Madrid) con milisegundos trabajados positivos. */
 export function workedMsByUserDay(
   events: EffectiveEvent[],
   rangeStart: Date,
   rangeEnd: Date,
 ): Map<string, number> {
   const byDay = new Map<string, number>();
-  const cursor = new Date(rangeStart);
-  cursor.setUTCHours(0, 0, 0, 0);
+  let cursor = startOfDay(toZonedTime(rangeStart, APP_TIMEZONE));
+  let utcStart = fromZonedTime(cursor, APP_TIMEZONE);
 
-  while (cursor < rangeEnd) {
-    const dayStart = new Date(cursor);
-    const dayEnd = new Date(cursor);
-    dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
-
-    const dayKey = dayStart.toISOString().slice(0, 10);
-    const clippedStart = dayStart < rangeStart ? rangeStart : dayStart;
+  while (utcStart < rangeEnd) {
+    const dayEnd = fromZonedTime(addDays(cursor, 1), APP_TIMEZONE);
+    const clippedStart = utcStart < rangeStart ? rangeStart : utcStart;
     const clippedEnd = dayEnd > rangeEnd ? rangeEnd : dayEnd;
-    const ms = workedMsInRange(events, clippedStart, clippedEnd);
-    if (ms > 0) byDay.set(dayKey, ms);
-
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
+    if (clippedEnd > clippedStart) {
+      const ms = workedMsInRange(events, clippedStart, clippedEnd);
+      if (ms > 0) {
+        const dayKey = formatInTimeZone(utcStart, APP_TIMEZONE, "yyyy-MM-dd");
+        byDay.set(dayKey, ms);
+      }
+    }
+    cursor = addDays(cursor, 1);
+    utcStart = fromZonedTime(cursor, APP_TIMEZONE);
   }
 
   return byDay;
 }
 
-/** Inicio del día local [00:00, 24:00). */
+/** Inicio del día civil en España [00:00, 24:00) como instantes UTC. */
 export function localDayBounds(d: Date): { start: Date; end: Date } {
-  const start = new Date(d);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1);
+  const zoned = toZonedTime(d, APP_TIMEZONE);
+  const dayStart = startOfDay(zoned);
+  const start = fromZonedTime(dayStart, APP_TIMEZONE);
+  const nextDay = addDays(dayStart, 1);
+  const end = fromZonedTime(nextDay, APP_TIMEZONE);
   return { start, end };
 }
 
-/** Lunes 00:00 local de la semana que contiene `d` (semana laboral LUN–DOM). */
+/** Lunes 00:00 en España de la semana que contiene `d` (LUN–DOM). */
 export function mondayOfWeek(d: Date): Date {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  const day = x.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  x.setDate(x.getDate() + diff);
-  return x;
+  const zoned = toZonedTime(d, APP_TIMEZONE);
+  const monday = startOfWeek(zoned, { weekStartsOn: 1 });
+  return fromZonedTime(monday, APP_TIMEZONE);
 }
 
 /** Hora de la última entrada sin salida (jornada abierta). */

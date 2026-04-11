@@ -19,6 +19,9 @@ import {
   workedMsByUserDay,
   workedMsInRange,
 } from "@/lib/time";
+import { APP_TIMEZONE } from "@/lib/locale";
+import { addDays, startOfDay } from "date-fns";
+import { formatInTimeZone, fromZonedTime, toZonedTime, toDate } from "date-fns-tz";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import type { TimeEventType } from "@prisma/client";
@@ -77,16 +80,16 @@ async function computeDashboardMetrics(userId: string): Promise<DashboardLiveMet
   );
 
   const weekStart = mondayOfWeek(now);
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekEnd.getDate() + 7);
+  const zMon = toZonedTime(weekStart, APP_TIMEZONE);
+  const weekEnd = fromZonedTime(addDays(zMon, 7), APP_TIMEZONE);
   const workedWeekMs = workedMsInRange(effective, weekStart, weekEnd, now);
 
   const weekdayLabels = ["LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB", "DOM"];
   const weekDays: DashboardWeekDay[] = [];
   for (let i = 0; i < 7; i++) {
-    const d = new Date(weekStart);
-    d.setDate(d.getDate() + i);
-    const { start, end } = localDayBounds(d);
+    const zDay = addDays(zMon, i);
+    const start = fromZonedTime(startOfDay(zDay), APP_TIMEZONE);
+    const end = fromZonedTime(addDays(startOfDay(zDay), 1), APP_TIMEZONE);
     const isToday = start.getTime() === todayBounds.start.getTime();
     let workedMs: number;
     if (start.getTime() > todayBounds.start.getTime()) {
@@ -99,7 +102,7 @@ async function computeDashboardMetrics(userId: string): Promise<DashboardLiveMet
     weekDays.push({
       dateISO: start.toISOString(),
       weekdayShort: weekdayLabels[i],
-      dayNum: d.getDate(),
+      dayNum: Number(formatInTimeZone(start, APP_TIMEZONE, "d")),
       workedMs,
       isToday,
     });
@@ -500,9 +503,16 @@ export async function exportWorkedHoursCsv(input: {
 }) {
   const user = await sessionSuperadminOrRedirect();
 
-  const from = new Date(input.from);
-  const to = new Date(input.to);
-  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to <= from) {
+  const from = toDate(`${input.from}T00:00:00`, { timeZone: APP_TIMEZONE });
+  const toExclusive = addDays(
+    toDate(`${input.to}T00:00:00`, { timeZone: APP_TIMEZONE }),
+    1,
+  );
+  if (
+    Number.isNaN(from.getTime()) ||
+    Number.isNaN(toExclusive.getTime()) ||
+    toExclusive <= from
+  ) {
     throw new Error("Rango de fechas no válido.");
   }
 
@@ -531,8 +541,9 @@ export async function exportWorkedHoursCsv(input: {
     entityType: "Export",
     entityId: null,
     metadata: {
-      from: from.toISOString(),
-      to: to.toISOString(),
+      from: input.from,
+      to: input.to,
+      timeZone: APP_TIMEZONE,
       userId: filterId ?? "all",
     },
   });
@@ -543,7 +554,7 @@ export async function exportWorkedHoursCsv(input: {
     const events = allEvents.filter((e) => e.userId === u.id);
     const corrections = allCorrections.filter((c) => c.userId === u.id);
     const effective = toEffectiveEvents(events, corrections);
-    const byDay = workedMsByUserDay(effective, from, to);
+    const byDay = workedMsByUserDay(effective, from, toExclusive);
 
     for (const [day, ms] of byDay) {
       const hours = (ms / 3_600_000).toFixed(2);

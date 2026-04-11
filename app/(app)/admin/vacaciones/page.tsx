@@ -4,6 +4,7 @@ import {
 } from "@/lib/vacation-actions";
 import { AdminPendingVacations } from "@/components/vacations/admin-pending-vacations";
 import { AdminVacationsPanel } from "@/components/vacations/admin-vacations-panel";
+import { calendarYearSpain } from "@/lib/locale";
 import { unstable_noStore as noStore } from "next/cache";
 
 /** Datos en tiempo real: lista de pendientes y no caché RSC obsoleto. */
@@ -15,7 +16,7 @@ export default async function AdminVacacionesPage() {
     getAdminVacationUsers(),
     getAdminPendingVacationRequests(),
   ]);
-  const year = new Date().getFullYear();
+  const year = calendarYearSpain();
 
   return (
     <div className="space-y-6">

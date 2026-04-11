@@ -1,5 +1,6 @@
 import { authSafe, redirectToLoginClearingSession } from "@/lib/auth-safe";
 import { hasValidAppSession } from "@/lib/session-id";
+import { calendarYearSpain } from "@/lib/locale";
 import { redirect } from "next/navigation";
 import { getMyVacationSummary } from "@/lib/vacation-actions";
 import { MyVacationsPanel } from "@/components/vacations/my-vacations-panel";
@@ -9,7 +10,7 @@ export default async function VacacionesPage() {
   if (!hasValidAppSession(session)) redirectToLoginClearingSession();
   if (session!.user.role === "SUPERADMIN") redirect("/admin/vacaciones");
 
-  const year = new Date().getFullYear();
+  const year = calendarYearSpain();
   const initial = await getMyVacationSummary(year);
 
   return (
