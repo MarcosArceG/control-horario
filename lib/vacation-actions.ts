@@ -11,7 +11,13 @@ import { writeAuditLog } from "@/lib/audit";
 import type { VacationStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { adminNotifyEmails, escapeHtml, sendEmail } from "@/lib/email";
+import {
+  notifyAdminsOfVacationRequest,
+  notifyEmployeeVacationApproved,
+  notifyEmployeeVacationRejected,
+  notifyEmployeeVacationRequested,
+  type VacationEmailData,
+} from "@/lib/vacation-emails";
 import {
   calendarDaysInCalendarYear,
   countCalendarDaysInclusive,
@@ -19,6 +25,7 @@ import {
   rangesOverlap,
   VACATION_DAYS_PER_YEAR,
 } from "@/lib/vacation-days";
+import { calendarYearSpain } from "@/lib/locale";
 
 /** Fecha DATE de PostgreSQL → YYYY-MM-DD (UTC calendario). */
 function dateFieldToYMD(d: Date): string {
@@ -211,55 +218,28 @@ export async function getMyVacationSummary(year: number) {
 
 const VACATION_NOTE_MAX = 500;
 
-function ymdToEs(ymd: string): string {
-  const [y, m, d] = ymd.split("-");
-  return `${d}/${m}/${y}`;
+function toEmailData(e: Parameters<typeof toDTO>[0] & {
+  user: { email: string; name: string | null };
+}): VacationEmailData {
+  const dto = toDTO(e);
+  return {
+    employeeEmail: e.user.email,
+    employeeName: e.user.name,
+    startDate: dto.startDate,
+    endDate: dto.endDate,
+    calendarDays: dto.calendarDays,
+    note: dto.note,
+  };
 }
 
-/** Aviso por correo a los administradores de una nueva solicitud de vacaciones. */
-async function notifyAdminsOfVacationRequest(input: {
-  employeeEmail: string;
-  employeeName: string | null;
-  startDate: string;
-  endDate: string;
-  calendarDays: number;
-  note: string | null;
-}) {
-  const who = input.employeeName?.trim() || input.employeeEmail;
-  const from = ymdToEs(input.startDate);
-  const to = ymdToEs(input.endDate);
-  const days = `${input.calendarDays} ${input.calendarDays === 1 ? "día natural" : "días naturales"}`;
-  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.AUTH_URL || "").replace(/\/$/, "");
-  const link = baseUrl ? `${baseUrl}/admin/vacaciones` : null;
-
-  const text = [
-    `${who} (${input.employeeEmail}) ha solicitado vacaciones.`,
-    ``,
-    `Del ${from} al ${to} (${days}).`,
-    input.note ? `Comentario: ${input.note}` : null,
-    ``,
-    link ? `Revisa y aprueba o rechaza la solicitud en: ${link}` : `Revisa la solicitud en el panel de administración.`,
-  ]
-    .filter((l) => l !== null)
-    .join("\n");
-
-  const html = `
-<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;line-height:1.5">
-  <p><strong>${escapeHtml(who)}</strong> (${escapeHtml(input.employeeEmail)}) ha solicitado vacaciones.</p>
-  <p>Del <strong>${from}</strong> al <strong>${to}</strong> (${days}).</p>
-  ${input.note ? `<p>Comentario: <em>${escapeHtml(input.note)}</em></p>` : ""}
-  ${
-    link
-      ? `<p><a href="${escapeHtml(link)}" style="display:inline-block;padding:10px 16px;background:#111;color:#fff;text-decoration:none;border-radius:6px">Revisar solicitud</a></p>`
-      : "<p>Revisa la solicitud en el panel de administración.</p>"
-  }
-</div>`;
-
-  await sendEmail({
-    to: adminNotifyEmails(),
-    subject: `Solicitud de vacaciones: ${who} (${from} – ${to})`,
-    html,
-    text,
+/** Ejecuta envíos de correo tras responder: un fallo no debe romper la acción. */
+function sendAfterResponse(label: string, fn: () => Promise<void>) {
+  after(async () => {
+    try {
+      await fn();
+    } catch (e) {
+      console.error(`[email] ${label}:`, e);
+    }
   });
 }
 
@@ -313,21 +293,13 @@ export async function requestMyVacation(input: {
   });
 
   const dto = toDTO(created);
-  // Tras responder al usuario: un fallo del correo no debe romper la solicitud.
-  after(async () => {
-    try {
-      await notifyAdminsOfVacationRequest({
-        employeeEmail: created.user.email,
-        employeeName: created.user.name,
-        startDate: dto.startDate,
-        endDate: dto.endDate,
-        calendarDays: dto.calendarDays,
-        note: dto.note,
-      });
-    } catch (e) {
-      console.error("[email] Aviso de vacaciones a administradores:", e);
-    }
-  });
+  const mail = toEmailData(created);
+  sendAfterResponse("Aviso de vacaciones a administradores", () =>
+    notifyAdminsOfVacationRequest(mail),
+  );
+  sendAfterResponse("Confirmación de solicitud al empleado", () =>
+    notifyEmployeeVacationRequested(mail),
+  );
 
   revalidatePath("/vacaciones");
   revalidatePath("/admin/vacaciones");
@@ -532,9 +504,12 @@ export async function adminApproveVacation(id: string) {
     row.id,
   );
 
-  await prisma.vacationEntry.update({
+  const approved = await prisma.vacationEntry.update({
     where: { id },
     data: { status: "APPROVED" },
+    include: {
+      user: { select: { email: true, name: true, vacationDaysPerYear: true } },
+    },
   });
 
   await writeAuditLog({
@@ -544,6 +519,16 @@ export async function adminApproveVacation(id: string) {
     entityId: id,
     metadata: { subjectUserId: row.userId },
   });
+
+  const currentYear = calendarYearSpain();
+  const used = await sumApprovedDaysInYear(approved.userId, currentYear);
+  const remaining = Math.max(0, approved.user.vacationDaysPerYear - used);
+  sendAfterResponse("Aviso de aprobación al empleado", () =>
+    notifyEmployeeVacationApproved(toEmailData(approved), {
+      year: currentYear,
+      remaining,
+    }),
+  );
 
   revalidatePath("/admin/vacaciones");
   revalidatePath("/vacaciones");
@@ -558,9 +543,10 @@ export async function adminRejectVacation(id: string) {
     throw new Error("Solo se puede rechazar una solicitud pendiente.");
   }
 
-  await prisma.vacationEntry.update({
+  const rejected = await prisma.vacationEntry.update({
     where: { id },
     data: { status: "REJECTED" },
+    include: { user: { select: { email: true, name: true } } },
   });
 
   await writeAuditLog({
@@ -570,6 +556,10 @@ export async function adminRejectVacation(id: string) {
     entityId: id,
     metadata: { subjectUserId: row.userId },
   });
+
+  sendAfterResponse("Aviso de rechazo al empleado", () =>
+    notifyEmployeeVacationRejected(toEmailData(rejected)),
+  );
 
   revalidatePath("/admin/vacaciones");
   revalidatePath("/vacaciones");
