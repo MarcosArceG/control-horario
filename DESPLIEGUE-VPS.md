@@ -56,7 +56,25 @@ una variable hay que **Redeploy** (las `NEXT_PUBLIC_*` se incrustan en el build)
 
 Actuales: `DATABASE_URL` (BD interna del VPS), `AUTH_SECRET`, `AUTH_URL`, `AUTH_USER_1_*`,
 `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `NEXT_PUBLIC_APP_URL`,
-`NIXPACKS_NODE_VERSION=22`. Una variable nueva en el código → añadirla también en Coolify.
+`NIXPACKS_NODE_VERSION=22`, `CRON_SECRET`. Opcionales: `WEEKLY_REPORT_EMAILS` (por defecto
+`informes@njm.es`), `WEEKLY_REPORT_EXCLUDE` (por defecto `markosarce@gmail.com,info@gestiondelamianto.com`).
+Una variable nueva en el código → añadirla también en Coolify.
+
+## Informe semanal de horas (domingos)
+
+`POST /api/cron/informe-semanal` envía a `informes@njm.es` el desglose lunes–domingo de cada
+trabajador (rol USER): entradas/salidas de cada día, total semanal, acumulado del mes,
+vacaciones aprobadas e incidencias (salida sin fichar, tramos de más de 12 h, días sin fichajes).
+
+Lo dispara una **tarea programada de Coolify**: panel → fichaje → **Scheduled Tasks**,
+frecuencia `0 20 * * 0` (domingo 20:00, hora del servidor) y comando:
+
+```bash
+node -e "fetch('http://localhost:'+(process.env.PORT||3000)+'/api/cron/informe-semanal',{method:'POST',headers:{authorization:'Bearer '+process.env.CRON_SECRET}}).then(async r=>{console.log(r.status,await r.text());process.exit(r.ok?0:1)})"
+```
+
+- Vista previa sin enviar (sesión de superadmin): `/api/cron/informe-semanal?semana=AAAA-MM-DD`.
+- Reenviar una semana o probar: añadir `?semana=AAAA-MM-DD` y/o `?para=correo@…` a la URL del POST.
 
 ## Logs y problemas
 
